@@ -1,15 +1,17 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, LogIn, Zap } from 'lucide-react';
+import { Moon, Sun, LogIn, Zap, BookOpen, Plus, Crown } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, loading } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
   return (
@@ -26,7 +28,39 @@ const Header = () => {
             </span>
           </div>
 
-          {/* Navigation & Actions */}
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/articles')}
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Articles
+            </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/create-article')}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/admin')}
+                className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            )}
+          </nav>
+
+          {/* Actions */}
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
