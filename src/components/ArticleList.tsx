@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ interface Article {
   profiles: {
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 const ArticleList: React.FC = () => {
@@ -74,7 +73,7 @@ const ArticleList: React.FC = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setArticles(data || []);
+      setArticles((data as Article[]) || []);
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast({

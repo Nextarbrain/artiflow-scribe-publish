@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, LogIn, Zap, BookOpen, Plus, Crown } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useNavigate } from 'react-router-dom';
 import UserMenu from './UserMenu';
