@@ -46,8 +46,17 @@ const ArticleList: React.FC = () => {
       let query = supabase
         .from('articles')
         .select(`
-          *,
-          profiles:user_id (
+          id,
+          title,
+          excerpt,
+          content,
+          featured_image_url,
+          category,
+          status,
+          views_count,
+          created_at,
+          user_id,
+          profiles!inner(
             full_name,
             email
           )
@@ -73,7 +82,14 @@ const ArticleList: React.FC = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setArticles(data || []);
+      
+      // Transform the data to match our Article interface
+      const transformedData: Article[] = (data || []).map(item => ({
+        ...item,
+        profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+      }));
+      
+      setArticles(transformedData);
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast({
