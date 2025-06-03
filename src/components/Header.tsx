@@ -3,16 +3,21 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, LogIn, Zap } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import UserMenu from './UserMenu';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -36,13 +41,20 @@ const Header = () => {
               )}
             </Button>
             
-            <Button
-              variant="outline"
-              className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Login
-            </Button>
+            {loading ? (
+              <div className="w-10 h-10 animate-pulse bg-gray-200 dark:bg-gray-700 rounded-full" />
+            ) : user ? (
+              <UserMenu />
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/auth')}
+                className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+            )}
           </div>
         </div>
       </div>
