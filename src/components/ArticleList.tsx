@@ -73,7 +73,7 @@ const ArticleList: React.FC = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setArticles((data as Article[]) || []);
+      setArticles(data || []);
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast({
