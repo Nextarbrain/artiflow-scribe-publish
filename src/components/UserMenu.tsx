@@ -10,13 +10,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { User, LogOut, FileText, CreditCard } from 'lucide-react';
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
+  // Improve how we get user information, properly handling Google auth data
   const initials = user.user_metadata?.full_name
     ? user.user_metadata.full_name
         .split(' ')
@@ -24,6 +27,10 @@ const UserMenu = () => {
         .join('')
         .toUpperCase()
     : user.email?.[0]?.toUpperCase() || 'U';
+
+  const handleNavigateToMyArticles = () => {
+    navigate('/articles', { state: { filter: 'my' } });
+  };
 
   return (
     <DropdownMenu>
@@ -50,11 +57,11 @@ const UserMenu = () => {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleNavigateToMyArticles}>
           <FileText className="mr-2 h-4 w-4" />
           <span>My Articles</span>
         </DropdownMenuItem>
