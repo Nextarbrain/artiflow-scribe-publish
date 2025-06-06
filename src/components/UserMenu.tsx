@@ -19,14 +19,28 @@ const UserMenu = () => {
 
   if (!user) return null;
 
-  // Improve how we get user information, properly handling Google auth data
-  const initials = user.user_metadata?.full_name
-    ? user.user_metadata.full_name
+  // Get user information from both profile and Google auth data
+  const getDisplayName = () => {
+    return user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  };
+
+  const getInitials = () => {
+    const name = user.user_metadata?.full_name;
+    if (name) {
+      return name
         .split(' ')
-        .map((name: string) => name[0])
+        .map((word: string) => word[0])
         .join('')
         .toUpperCase()
-    : user.email?.[0]?.toUpperCase() || 'U';
+        .slice(0, 2);
+    }
+    return user.email?.[0]?.toUpperCase() || 'U';
+  };
+
+  const getAvatarUrl = () => {
+    // Use the avatar URL from user metadata (could be from profile or Google)
+    return user.user_metadata?.avatar_url;
+  };
 
   const handleNavigateToMyArticles = () => {
     navigate('/articles', { state: { filter: 'my' } });
@@ -38,11 +52,11 @@ const UserMenu = () => {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarImage
-              src={user.user_metadata?.avatar_url}
-              alt={user.user_metadata?.full_name || user.email}
+              src={getAvatarUrl()}
+              alt={getDisplayName()}
             />
             <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
-              {initials}
+              {getInitials()}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -50,9 +64,7 @@ const UserMenu = () => {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
-            {user.user_metadata?.full_name && (
-              <p className="font-medium text-sm">{user.user_metadata.full_name}</p>
-            )}
+            <p className="font-medium text-sm">{getDisplayName()}</p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>

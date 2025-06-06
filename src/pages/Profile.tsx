@@ -100,19 +100,38 @@ const Profile = () => {
     const file = e.target.files && e.target.files[0];
     if (!file || !user) return;
     
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image smaller than 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       setUploadingAvatar(true);
       
-      // Generate a unique filename
+      // Generate a unique filename with user ID folder structure
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
       
-      // Upload the file to Supabase Storage
+      // Upload the file to Supabase Storage avatars bucket
       const { error: uploadError } = await supabase
         .storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(fileName, file);
         
       if (uploadError) throw uploadError;
       
@@ -120,7 +139,7 @@ const Profile = () => {
       const { data: { publicUrl } } = supabase
         .storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
       
       // Update user profile with new avatar URL
       await supabase
@@ -165,6 +184,11 @@ const Profile = () => {
       .toUpperCase();
   };
 
+  const getAvatarUrl = () => {
+    // Priority: profile avatar_url > user metadata avatar_url > user metadata avatar_url
+    return profile?.avatar_url || user?.user_metadata?.avatar_url;
+  };
+
   if (!user) {
     return (
       <>
@@ -193,7 +217,7 @@ const Profile = () => {
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
-            <CardDescription>Manage your personal information</CardDescription>
+            <CardDescription>Manage your personal information and avatar</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {loading ? (
@@ -207,16 +231,16 @@ const Profile = () => {
                   <div className="relative">
                     <Avatar className="h-24 w-24">
                       <AvatarImage 
-                        src={profile?.avatar_url || undefined} 
+                        src={getAvatarUrl()} 
                         alt={profile?.full_name || user.email || 'Avatar'} 
                       />
                       <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-2xl">
-                        {getInitials(profile?.full_name)}
+                        {getInitials(profile?.full_name || user?.user_metadata?.full_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="absolute -bottom-1 -right-1">
                       <label htmlFor="avatar-upload" className="cursor-pointer">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-colors">
                           {uploadingAvatar ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
@@ -236,7 +260,7 @@ const Profile = () => {
                   </div>
                   <div className="text-center">
                     <h3 className="text-lg font-medium">
-                      {profile?.full_name || 'User'}
+                      {profile?.full_name || user?.user_metadata?.full_name || 'User'}
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
