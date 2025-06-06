@@ -30,6 +30,16 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
+            {user && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => navigate('/articles')}
