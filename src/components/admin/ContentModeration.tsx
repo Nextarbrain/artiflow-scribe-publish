@@ -47,11 +47,11 @@ const ContentModeration = () => {
         .from('content_moderation')
         .select(`
           *,
-          articles(
+          articles!inner(
             title,
             content,
             user_id,
-            profiles(
+            profiles!articles_user_id_fkey(
               full_name, 
               email
             )
