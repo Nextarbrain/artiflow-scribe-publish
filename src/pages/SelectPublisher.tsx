@@ -141,7 +141,7 @@ const SelectPublisher = () => {
                   </div>
                   <Checkbox
                     checked={isSelected(publisher.id)}
-                    onChange={(checked) => handlePublisherToggle(publisher, checked)}
+                    onCheckedChange={(checked) => handlePublisherToggle(publisher, checked === true)}
                     onClick={(e) => e.stopPropagation()}
                     className="ml-2"
                   />
