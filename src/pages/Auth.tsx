@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +23,16 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      // Check if user was in the middle of publisher selection flow
+      const savedPublishers = localStorage.getItem('selectedPublishers');
+      
+      if (savedPublishers) {
+        // User was in publisher selection flow, continue to write article
+        navigate('/write-article');
+      } else {
+        // Normal login, go to dashboard
+        navigate('/dashboard');
+      }
     }
   }, [user, navigate]);
 
