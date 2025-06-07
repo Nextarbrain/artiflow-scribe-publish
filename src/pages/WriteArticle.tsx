@@ -37,38 +37,49 @@ const WriteArticle = () => {
       return;
     }
 
-    // Get selected publishers from location state first, then localStorage as fallback
-    let publishers = location.state?.selectedPublishers;
+    console.log('WriteArticle: Starting publisher restoration...');
     
-    if (!publishers || publishers.length === 0) {
-      // Check localStorage for saved publishers (from login flow)
-      const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('WriteArticle: Checking localStorage for saved publishers:', savedPublishers);
-      
-      if (savedPublishers) {
-        try {
-          publishers = JSON.parse(savedPublishers);
-          console.log('WriteArticle: Found and parsed saved publishers:', publishers);
-        } catch (error) {
-          console.error('WriteArticle: Error parsing saved publishers:', error);
-          publishers = null;
+    // FIRST: Check for saved publishers in localStorage
+    const savedPublishers = localStorage.getItem('selectedPublishers');
+    console.log('WriteArticle: savedPublishers from localStorage:', savedPublishers);
+    
+    let publishersToUse = null;
+
+    // Try to get publishers from location state first
+    if (location.state?.selectedPublishers && location.state.selectedPublishers.length > 0) {
+      publishersToUse = location.state.selectedPublishers;
+      console.log('WriteArticle: Using publishers from location state:', publishersToUse);
+    }
+    // If no location state, try localStorage
+    else if (savedPublishers) {
+      try {
+        const parsedPublishers = JSON.parse(savedPublishers);
+        if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
+          publishersToUse = parsedPublishers;
+          console.log('WriteArticle: Successfully parsed publishers from localStorage:', publishersToUse);
         }
+      } catch (error) {
+        console.error('WriteArticle: Error parsing saved publishers:', error);
+        // Clean up corrupted data
+        localStorage.removeItem('selectedPublishers');
       }
     }
     
-    if (!publishers || publishers.length === 0) {
+    // If we have publishers to use, set them in state
+    if (publishersToUse && publishersToUse.length > 0) {
+      console.log('WriteArticle: Setting publishers in state:', publishersToUse);
+      setSelectedPublishers(publishersToUse);
+      
+      // ONLY clear localStorage AFTER we've successfully used the data
+      if (savedPublishers) {
+        console.log('WriteArticle: Clearing localStorage after successful restoration');
+        localStorage.removeItem('selectedPublishers');
+      }
+    } else {
+      // No publishers found anywhere - redirect to publisher selection
       console.log('WriteArticle: No publishers found, redirecting to select-publisher');
       navigate('/select-publisher');
       return;
-    }
-
-    console.log('WriteArticle: Setting publishers:', publishers);
-    setSelectedPublishers(publishers);
-    
-    // Clear from localStorage only after we've successfully used it
-    if (localStorage.getItem('selectedPublishers')) {
-      console.log('WriteArticle: Clearing localStorage after successful use');
-      localStorage.removeItem('selectedPublishers');
     }
   }, [user, location.state, navigate]);
 
