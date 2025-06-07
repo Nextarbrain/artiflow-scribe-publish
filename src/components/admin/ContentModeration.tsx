@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +51,10 @@ const ContentModeration = () => {
             title,
             content,
             user_id,
-            profiles(full_name, email)
+            profiles!articles_user_id_fkey(
+              full_name, 
+              email
+            )
           )
         `)
         .order('created_at', { ascending: false });
