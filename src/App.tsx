@@ -14,6 +14,10 @@ import CreateArticle from "./pages/CreateArticle";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import SelectPublisher from "./pages/SelectPublisher";
+import WriteArticle from "./pages/WriteArticle";
+import PreviewArticle from "./pages/PreviewArticle";
+import Payment from "./pages/Payment";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,10 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/create-article" element={<CreateArticle />} />
+              <Route path="/select-publisher" element={<SelectPublisher />} />
+              <Route path="/write-article" element={<WriteArticle />} />
+              <Route path="/preview-article" element={<PreviewArticle />} />
+              <Route path="/payment" element={<Payment />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/profile" element={<Profile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

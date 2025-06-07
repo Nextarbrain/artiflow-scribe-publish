@@ -14,11 +14,17 @@ export type Database = {
           category: string | null
           content: string
           created_at: string
+          draft_stage: string | null
           excerpt: string | null
           featured_image_url: string | null
           id: string
+          meta_description: string | null
+          payment_status: string | null
+          publisher_id: string | null
           status: string | null
+          tags: string[] | null
           title: string
+          total_cost: number | null
           updated_at: string
           user_id: string
           views_count: number | null
@@ -27,11 +33,17 @@ export type Database = {
           category?: string | null
           content: string
           created_at?: string
+          draft_stage?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
           id?: string
+          meta_description?: string | null
+          payment_status?: string | null
+          publisher_id?: string | null
           status?: string | null
+          tags?: string[] | null
           title: string
+          total_cost?: number | null
           updated_at?: string
           user_id: string
           views_count?: number | null
@@ -40,16 +52,81 @@ export type Database = {
           category?: string | null
           content?: string
           created_at?: string
+          draft_stage?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
           id?: string
+          meta_description?: string | null
+          payment_status?: string | null
+          publisher_id?: string | null
           status?: string | null
+          tags?: string[] | null
           title?: string
+          total_cost?: number | null
           updated_at?: string
           user_id?: string
           views_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "articles_publisher_id_fkey"
+            columns: ["publisher_id"]
+            isOneToOne: false
+            referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          article_id: string
+          created_at: string
+          id: string
+          publisher_id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          article_id: string
+          created_at?: string
+          id?: string
+          publisher_id: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          article_id?: string
+          created_at?: string
+          id?: string
+          publisher_id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_publisher_id_fkey"
+            columns: ["publisher_id"]
+            isOneToOne: false
+            referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -75,6 +152,45 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      publishers: {
+        Row: {
+          audience_size: number | null
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          price_per_article: number
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          audience_size?: number | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          price_per_article: number
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          audience_size?: number | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          price_per_article?: number
+          updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }

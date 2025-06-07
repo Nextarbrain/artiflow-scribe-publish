@@ -41,7 +41,7 @@ const Hero = () => {
           <Button 
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            onClick={() => navigate('/create-article')}
+            onClick={() => navigate('/select-publisher')}
           >
             Try it for Free
             <ArrowRight className="w-5 h-5 ml-2" />
