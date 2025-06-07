@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface AIGenerationRequest {
   prompt: string;
@@ -26,12 +27,16 @@ export interface AIGenerationResponse {
 
 export const useAIGeneration = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastGeneration, setLastGeneration] = useState<AIGenerationResponse | null>(null);
 
   const logAIUsage = async (response: AIGenerationResponse, articleId?: string, success: boolean = true, errorMessage?: string) => {
+    if (!user) return;
+    
     try {
       await supabase.from('ai_usage_logs').insert({
+        user_id: user.id,
         article_id: articleId,
         provider: response.provider,
         model: response.model || 'unknown',
