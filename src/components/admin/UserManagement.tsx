@@ -17,13 +17,13 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
       active: "default",
       suspended: "secondary",
       banned: "destructive"
     };
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+    return <Badge variant={variants[status || 'active'] || "secondary"}>{status || 'active'}</Badge>;
   };
 
   const getInitials = (name: string | null, email: string | null) => {
@@ -33,7 +33,7 @@ const UserManagement = () => {
     return email?.[0]?.toUpperCase() || 'U';
   };
 
-  const handleStatusChange = async (userId: string, newStatus: 'active' | 'suspended' | 'banned') => {
+  const handleStatusChange = async (userId: string, newStatus: string) => {
     await updateUserStatus(userId, newStatus);
   };
 
@@ -130,10 +130,8 @@ const UserManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={user.status}
-                      onValueChange={(value: 'active' | 'suspended' | 'banned') => 
-                        handleStatusChange(user.id, value)
-                      }
+                      value={user.status || 'active'}
+                      onValueChange={(value) => handleStatusChange(user.id, value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />

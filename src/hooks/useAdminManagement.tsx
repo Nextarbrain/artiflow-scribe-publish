@@ -13,7 +13,7 @@ export interface Publisher {
   price_per_article: number;
   audience_size: number | null;
   category: string | null;
-  status: 'active' | 'inactive' | 'pending';
+  status: string | null;
   contact_email: string | null;
   contact_person: string | null;
   payment_terms: string | null;
@@ -27,7 +27,7 @@ export interface UserProfile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  status: 'active' | 'suspended' | 'banned';
+  status: string | null;
   last_login_at: string | null;
   email_verified: boolean | null;
   phone: string | null;
@@ -61,6 +61,21 @@ export interface Payment {
   updated_at: string;
 }
 
+export interface PublisherInput {
+  name: string;
+  description?: string | null;
+  website_url?: string | null;
+  logo_url?: string | null;
+  price_per_article: number;
+  audience_size?: number | null;
+  category?: string | null;
+  status?: string | null;
+  contact_email?: string | null;
+  contact_person?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
+}
+
 export const useAdminManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -81,7 +96,7 @@ export const useAdminManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPublishers(data || []);
+      setPublishers(data as Publisher[] || []);
     } catch (error) {
       console.error('Error fetching publishers:', error);
       toast({
@@ -94,7 +109,7 @@ export const useAdminManagement = () => {
     }
   };
 
-  const createPublisher = async (publisherData: Partial<Publisher>) => {
+  const createPublisher = async (publisherData: PublisherInput) => {
     try {
       const { data, error } = await supabase
         .from('publishers')
@@ -133,7 +148,7 @@ export const useAdminManagement = () => {
     }
   };
 
-  const updatePublisher = async (id: string, updates: Partial<Publisher>) => {
+  const updatePublisher = async (id: string, updates: Partial<PublisherInput>) => {
     try {
       const { data, error } = await supabase
         .from('publishers')
@@ -220,7 +235,7 @@ export const useAdminManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers(data as UserProfile[] || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -233,7 +248,7 @@ export const useAdminManagement = () => {
     }
   };
 
-  const updateUserStatus = async (userId: string, status: 'active' | 'suspended' | 'banned') => {
+  const updateUserStatus = async (userId: string, status: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -287,7 +302,7 @@ export const useAdminManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setArticles(data || []);
+      setArticles(data as Article[] || []);
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast({
@@ -355,7 +370,7 @@ export const useAdminManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments(data as Payment[] || []);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast({
