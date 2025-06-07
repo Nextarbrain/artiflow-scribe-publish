@@ -86,5 +86,33 @@ export const useAdmin = () => {
     }
   };
 
-  return { isAdmin, loading, makeUserAdmin };
+  const removeUserRole = async (targetUserId: string, role: 'admin' | 'user') => {
+    if (!isAdmin || !user) {
+      console.error('Unauthorized: User is not admin or not authenticated');
+      return { error: 'Unauthorized' };
+    }
+
+    try {
+      console.log('Removing role for user:', targetUserId, role);
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', targetUserId)
+        .eq('role', role);
+
+      if (error) {
+        console.error('Error removing user role:', error);
+        return { error: error.message };
+      }
+
+      console.log('Successfully removed user role');
+      return { error: null };
+    } catch (error) {
+      console.error('Error removing user role:', error);
+      return { error: 'Failed to remove user role' };
+    }
+  };
+
+  return { isAdmin, loading, makeUserAdmin, removeUserRole };
 };
