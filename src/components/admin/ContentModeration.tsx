@@ -29,8 +29,8 @@ interface ContentModerationItem {
     profiles?: {
       full_name: string | null;
       email: string | null;
-    };
-  };
+    } | null;
+  } | null;
 }
 
 const ContentModeration = () => {
@@ -52,7 +52,7 @@ const ContentModeration = () => {
             title,
             content,
             user_id,
-            profiles!articles_user_id_fkey(full_name, email)
+            profiles(full_name, email)
           )
         `)
         .order('created_at', { ascending: false });
