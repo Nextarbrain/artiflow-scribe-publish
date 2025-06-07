@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,45 +16,52 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signUp, signInWithGoogle, user } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, session } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      console.log('Auth: User logged in, checking for saved publishers');
+    if (user && session?.access_token) {
+      console.log('Auth: User logged in with valid session, checking for saved publishers');
       
-      // Check for saved publishers in localStorage
-      const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('Auth: savedPublishers from localStorage:', savedPublishers);
-      
-      if (savedPublishers) {
-        try {
-          const parsedPublishers = JSON.parse(savedPublishers);
-          console.log('Auth: Parsed publishers:', parsedPublishers);
-          
-          if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-            console.log('Auth: Navigating to write-article with publishers');
-            navigate('/write-article', { 
-              state: { 
-                selectedPublishers: parsedPublishers,
-                fromAuth: true 
-              },
-              replace: true 
-            });
-            return;
+      // Add a delay to ensure all auth processes are complete
+      const redirectTimeout = setTimeout(() => {
+        // Check for saved publishers in localStorage
+        const savedPublishers = localStorage.getItem('selectedPublishers');
+        console.log('Auth: savedPublishers from localStorage:', savedPublishers);
+        
+        if (savedPublishers) {
+          try {
+            const parsedPublishers = JSON.parse(savedPublishers);
+            console.log('Auth: Parsed publishers:', parsedPublishers);
+            
+            if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
+              console.log('Auth: Navigating to write-article with publishers');
+              // Clear the saved publishers since we're using them
+              localStorage.removeItem('selectedPublishers');
+              navigate('/write-article', { 
+                state: { 
+                  selectedPublishers: parsedPublishers,
+                  fromAuth: true 
+                },
+                replace: true 
+              });
+              return;
+            }
+          } catch (error) {
+            console.error('Auth: Error parsing saved publishers:', error);
+            localStorage.removeItem('selectedPublishers');
           }
-        } catch (error) {
-          console.error('Auth: Error parsing saved publishers:', error);
-          localStorage.removeItem('selectedPublishers');
         }
-      }
-      
-      console.log('Auth: No saved publishers, navigating to dashboard');
-      navigate('/dashboard', { replace: true });
+        
+        console.log('Auth: No saved publishers, navigating to dashboard');
+        navigate('/dashboard', { replace: true });
+      }, 1000); // 1 second delay to ensure session is fully established
+
+      return () => clearTimeout(redirectTimeout);
     }
-  }, [user, navigate]);
+  }, [user, session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

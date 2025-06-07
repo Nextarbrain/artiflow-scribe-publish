@@ -30,32 +30,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!mounted) return;
 
         console.log('Auth state changed:', event, session?.user?.email);
+        console.log('Session has access token:', !!session?.access_token);
         
-        if (session?.user) {
+        if (session?.user && session?.access_token) {
           setSession(session);
           setUser(session.user);
           
           // Create profile if it doesn't exist (for new users)
           if (event === 'SIGNED_IN') {
-            try {
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                  id: session.user.id,
-                  email: session.user.email,
-                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
-                  avatar_url: session.user.user_metadata?.avatar_url
-                }, { 
-                  onConflict: 'id',
-                  ignoreDuplicates: false 
-                });
+            // Add delay to ensure session is fully established before profile operations
+            setTimeout(async () => {
+              try {
+                const { error: profileError } = await supabase
+                  .from('profiles')
+                  .upsert({
+                    id: session.user.id,
+                    email: session.user.email,
+                    full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
+                    avatar_url: session.user.user_metadata?.avatar_url
+                  }, { 
+                    onConflict: 'id',
+                    ignoreDuplicates: false 
+                  });
 
-              if (profileError) {
-                console.error('Error creating/updating profile:', profileError);
+                if (profileError) {
+                  console.error('Error creating/updating profile:', profileError);
+                }
+              } catch (error) {
+                console.error('Error handling profile creation:', error);
               }
-            } catch (error) {
-              console.error('Error handling profile creation:', error);
-            }
+            }, 200);
           }
           
           console.log('User signed in, metadata:', session.user.user_metadata);
@@ -75,9 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) {
           console.error('Error getting initial session:', error);
         }
-        if (mounted) {
+        if (mounted && session?.access_token) {
+          console.log('Initial session loaded with access token');
           setSession(session);
           setUser(session?.user ?? null);
+        }
+        if (mounted) {
           setLoading(false);
         }
       } catch (error) {

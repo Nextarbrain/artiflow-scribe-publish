@@ -1,23 +1,34 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAdmin = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!user) {
+      if (!user || !session) {
+        console.log('No user or session available for admin check');
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
+      // Ensure session is fully authenticated
+      if (!session.access_token) {
+        console.log('Session not fully authenticated yet, waiting...');
+        setLoading(true);
+        return;
+      }
+
       try {
         console.log('Checking admin status for user:', user.id);
+        console.log('Session access token exists:', !!session.access_token);
+        
+        // Add a small delay to ensure session is fully established
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Use the security definer function to check admin status
         const { data, error } = await supabase
@@ -28,7 +39,9 @@ export const useAdmin = () => {
 
         if (error) {
           console.error('Error checking admin status with RPC:', error);
-          // Fallback to direct query if RPC fails
+          
+          // Retry logic - try direct query as fallback
+          console.log('Retrying with direct query...');
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -40,7 +53,9 @@ export const useAdmin = () => {
             console.error('Error with fallback admin check:', roleError);
             setIsAdmin(false);
           } else {
-            setIsAdmin(!!roleData);
+            const hasAdminRole = !!roleData;
+            console.log('Fallback admin check result:', hasAdminRole);
+            setIsAdmin(hasAdminRole);
           }
         } else {
           console.log('Admin check result:', data);
@@ -54,8 +69,11 @@ export const useAdmin = () => {
       }
     };
 
-    checkAdminStatus();
-  }, [user]);
+    // Add a small delay before initial check to ensure session is ready
+    const timeoutId = setTimeout(checkAdminStatus, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [user, session]);
 
   const makeUserAdmin = async (targetUserId: string) => {
     if (!isAdmin || !user) {
