@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,11 +26,14 @@ const Auth = () => {
     if (user) {
       // Check if user was in the middle of publisher selection flow
       const savedPublishers = localStorage.getItem('selectedPublishers');
+      console.log('Auth: User logged in, checking saved publishers:', savedPublishers);
       
       if (savedPublishers) {
+        console.log('Auth: Found saved publishers, navigating to write-article');
         // User was in publisher selection flow, continue to write article
         navigate('/write-article');
       } else {
+        console.log('Auth: No saved publishers, navigating to dashboard');
         // Normal login, go to dashboard
         navigate('/dashboard');
       }

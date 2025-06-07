@@ -38,6 +38,7 @@ const SelectPublisher = () => {
 
     if (!user) {
       // Store selected publishers in localStorage for after login
+      console.log('SelectPublisher: Saving publishers to localStorage:', selectedPublishers);
       localStorage.setItem('selectedPublishers', JSON.stringify(selectedPublishers));
       toast({
         title: "Login Required",
@@ -48,6 +49,7 @@ const SelectPublisher = () => {
     }
 
     // User is logged in, proceed to article creation
+    console.log('SelectPublisher: User logged in, navigating to write-article with state');
     navigate('/write-article', { state: { selectedPublishers } });
   };
 
