@@ -10,7 +10,7 @@ export const useAdmin = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!user || !session) {
-        console.log('No user or session available for admin check');
+        console.log('useAdmin: No user or session available for admin check');
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -18,17 +18,13 @@ export const useAdmin = () => {
 
       // Ensure session is fully authenticated
       if (!session.access_token) {
-        console.log('Session not fully authenticated yet, waiting...');
+        console.log('useAdmin: Session not fully authenticated yet, waiting...');
         setLoading(true);
         return;
       }
 
       try {
-        console.log('Checking admin status for user:', user.id);
-        console.log('Session access token exists:', !!session.access_token);
-        
-        // Add a small delay to ensure session is fully established
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('useAdmin: Checking admin status for user:', user.id);
         
         // Use the security definer function to check admin status
         const { data, error } = await supabase
@@ -38,10 +34,10 @@ export const useAdmin = () => {
           });
 
         if (error) {
-          console.error('Error checking admin status with RPC:', error);
+          console.error('useAdmin: Error checking admin status with RPC:', error);
           
           // Retry logic - try direct query as fallback
-          console.log('Retrying with direct query...');
+          console.log('useAdmin: Retrying with direct query...');
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -50,27 +46,27 @@ export const useAdmin = () => {
             .maybeSingle();
 
           if (roleError) {
-            console.error('Error with fallback admin check:', roleError);
+            console.error('useAdmin: Error with fallback admin check:', roleError);
             setIsAdmin(false);
           } else {
             const hasAdminRole = !!roleData;
-            console.log('Fallback admin check result:', hasAdminRole);
+            console.log('useAdmin: Fallback admin check result:', hasAdminRole);
             setIsAdmin(hasAdminRole);
           }
         } else {
-          console.log('Admin check result:', data);
+          console.log('useAdmin: Admin check result:', data);
           setIsAdmin(data === true);
         }
       } catch (error) {
-        console.error('Unexpected error checking admin status:', error);
+        console.error('useAdmin: Unexpected error checking admin status:', error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
       }
     };
 
-    // Add a small delay before initial check to ensure session is ready
-    const timeoutId = setTimeout(checkAdminStatus, 100);
+    // Reduced delay for faster admin checks
+    const timeoutId = setTimeout(checkAdminStatus, 50);
 
     return () => clearTimeout(timeoutId);
   }, [user, session]);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,7 +47,7 @@ const WriteArticle = () => {
     const restorePublishers = () => {
       console.log('WriteArticle: Starting publisher restoration');
       
-      // First try: location state (from Auth.tsx navigation)
+      // First try: location state (from Auth.tsx navigation or direct navigation)
       if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
         const statePublishers = location.state.selectedPublishers;
         console.log('WriteArticle: Found publishers in navigation state:', statePublishers.length);
@@ -57,15 +56,11 @@ const WriteArticle = () => {
           console.log('WriteArticle: Using publishers from navigation state');
           setSelectedPublishers(statePublishers);
           setIsLoading(false);
-          
-          // Clean up localStorage since we got data from navigation
-          localStorage.removeItem('selectedPublishers');
-          console.log('WriteArticle: Cleaned localStorage after using navigation state');
           return true;
         }
       }
 
-      // Second try: localStorage (fallback)
+      // Second try: localStorage (fallback for edge cases)
       console.log('WriteArticle: Checking localStorage for publishers');
       const savedPublishers = localStorage.getItem('selectedPublishers');
       console.log('WriteArticle: localStorage value:', savedPublishers);

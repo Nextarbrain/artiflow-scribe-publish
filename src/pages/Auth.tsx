@@ -23,43 +23,40 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && session?.access_token) {
-      console.log('Auth: User logged in with valid session, checking for saved publishers');
+      console.log('Auth: User authenticated with valid session');
+      console.log('Auth: Session access token exists:', !!session.access_token);
+      console.log('Auth: User ID:', user.id);
       
-      // Add a delay to ensure all auth processes are complete
-      const redirectTimeout = setTimeout(() => {
-        // Check for saved publishers in localStorage
-        const savedPublishers = localStorage.getItem('selectedPublishers');
-        console.log('Auth: savedPublishers from localStorage:', savedPublishers);
-        
-        if (savedPublishers) {
-          try {
-            const parsedPublishers = JSON.parse(savedPublishers);
-            console.log('Auth: Parsed publishers:', parsedPublishers);
-            
-            if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-              console.log('Auth: Navigating to write-article with publishers');
-              // Clear the saved publishers since we're using them
-              localStorage.removeItem('selectedPublishers');
-              navigate('/write-article', { 
-                state: { 
-                  selectedPublishers: parsedPublishers,
-                  fromAuth: true 
-                },
-                replace: true 
-              });
-              return;
-            }
-          } catch (error) {
-            console.error('Auth: Error parsing saved publishers:', error);
+      // Check for saved publishers immediately - no delay needed
+      const savedPublishers = localStorage.getItem('selectedPublishers');
+      console.log('Auth: Checking localStorage for selectedPublishers:', savedPublishers);
+      
+      if (savedPublishers) {
+        try {
+          const parsedPublishers = JSON.parse(savedPublishers);
+          console.log('Auth: Parsed publishers from localStorage:', parsedPublishers);
+          
+          if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
+            console.log('Auth: Found valid publishers, navigating to write-article');
+            // Clear the saved publishers since we're using them
             localStorage.removeItem('selectedPublishers');
+            navigate('/write-article', { 
+              state: { 
+                selectedPublishers: parsedPublishers,
+                fromAuth: true 
+              },
+              replace: true 
+            });
+            return;
           }
+        } catch (error) {
+          console.error('Auth: Error parsing saved publishers:', error);
+          localStorage.removeItem('selectedPublishers');
         }
-        
-        console.log('Auth: No saved publishers, navigating to dashboard');
-        navigate('/dashboard', { replace: true });
-      }, 1000); // 1 second delay to ensure session is fully established
-
-      return () => clearTimeout(redirectTimeout);
+      }
+      
+      console.log('Auth: No saved publishers found, navigating to dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, session, navigate]);
 

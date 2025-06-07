@@ -1,4 +1,3 @@
-
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,16 +28,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('Auth state changed:', event, session?.user?.email);
-        console.log('Session has access token:', !!session?.access_token);
+        console.log('AuthContext: Auth state changed:', event, session?.user?.email);
+        console.log('AuthContext: Session has access token:', !!session?.access_token);
         
         if (session?.user && session?.access_token) {
+          console.log('AuthContext: Setting valid session and user');
           setSession(session);
           setUser(session.user);
           
           // Create profile if it doesn't exist (for new users)
           if (event === 'SIGNED_IN') {
-            // Add delay to ensure session is fully established before profile operations
+            console.log('AuthContext: User signed in, creating/updating profile');
+            // Small delay to ensure session is fully established before profile operations
             setTimeout(async () => {
               try {
                 const { error: profileError } = await supabase
@@ -54,16 +55,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   });
 
                 if (profileError) {
-                  console.error('Error creating/updating profile:', profileError);
+                  console.error('AuthContext: Error creating/updating profile:', profileError);
+                } else {
+                  console.log('AuthContext: Profile created/updated successfully');
                 }
               } catch (error) {
-                console.error('Error handling profile creation:', error);
+                console.error('AuthContext: Error handling profile creation:', error);
               }
-            }, 200);
+            }, 100); // Reduced delay
           }
-          
-          console.log('User signed in, metadata:', session.user.user_metadata);
         } else {
+          console.log('AuthContext: Clearing session and user');
           setSession(null);
           setUser(null);
         }
@@ -75,12 +77,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('AuthContext: Getting initial session');
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting initial session:', error);
+          console.error('AuthContext: Error getting initial session:', error);
         }
         if (mounted && session?.access_token) {
-          console.log('Initial session loaded with access token');
+          console.log('AuthContext: Initial session loaded with access token');
           setSession(session);
           setUser(session?.user ?? null);
         }
@@ -88,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error);
+        console.error('AuthContext: Error in getInitialSession:', error);
         if (mounted) {
           setLoading(false);
         }
