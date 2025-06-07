@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -8,7 +9,8 @@ import {
   Settings, 
   Shield,
   BarChart3,
-  Brain
+  Brain,
+  TrendingUp
 } from 'lucide-react';
 
 interface AdminNavigationProps {
@@ -25,13 +27,14 @@ const AdminNavigation = ({ activeTab, onTabChange }: AdminNavigationProps) => {
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'moderation', label: 'Moderation', icon: Shield },
     { id: 'ai', label: 'AI Config', icon: Brain },
+    { id: 'ai-analytics', label: 'AI Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
     <div className="w-full">
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           {navItems.map((tab) => {
             const IconComponent = tab.icon;
             return (

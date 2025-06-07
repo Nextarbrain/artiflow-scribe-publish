@@ -107,6 +107,62 @@ export type Database = {
           },
         ]
       }
+      ai_usage_logs: {
+        Row: {
+          article_id: string | null
+          completion_tokens: number | null
+          created_at: string | null
+          error_message: string | null
+          estimated_cost: number | null
+          id: string
+          model: string
+          prompt_tokens: number | null
+          provider: string
+          request_duration_ms: number | null
+          success: boolean | null
+          total_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          article_id?: string | null
+          completion_tokens?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          estimated_cost?: number | null
+          id?: string
+          model: string
+          prompt_tokens?: number | null
+          provider: string
+          request_duration_ms?: number | null
+          success?: boolean | null
+          total_tokens?: number | null
+          user_id: string
+        }
+        Update: {
+          article_id?: string | null
+          completion_tokens?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          estimated_cost?: number | null
+          id?: string
+          model?: string
+          prompt_tokens?: number | null
+          provider?: string
+          request_duration_ms?: number | null
+          success?: boolean | null
+          total_tokens?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_publishers: {
         Row: {
           article_id: string
@@ -156,6 +212,9 @@ export type Database = {
           draft_stage: string | null
           excerpt: string | null
           featured_image_url: string | null
+          generation_cost: number | null
+          generation_prompt: string | null
+          generation_settings: Json | null
           id: string
           meta_description: string | null
           moderation_status: string | null
@@ -178,6 +237,9 @@ export type Database = {
           draft_stage?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
+          generation_cost?: number | null
+          generation_prompt?: string | null
+          generation_settings?: Json | null
           id?: string
           meta_description?: string | null
           moderation_status?: string | null
@@ -200,6 +262,9 @@ export type Database = {
           draft_stage?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
+          generation_cost?: number | null
+          generation_prompt?: string | null
+          generation_settings?: Json | null
           id?: string
           meta_description?: string | null
           moderation_status?: string | null
@@ -222,6 +287,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_generation_queue: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          model: string | null
+          priority: number | null
+          prompt: string
+          provider: string
+          result: Json | null
+          settings: Json | null
+          started_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          model?: string | null
+          priority?: number | null
+          prompt: string
+          provider: string
+          result?: Json | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          model?: string | null
+          priority?: number | null
+          prompt?: string
+          provider?: string
+          result?: Json | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       content_moderation: {
         Row: {

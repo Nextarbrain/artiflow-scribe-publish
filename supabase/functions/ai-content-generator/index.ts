@@ -42,9 +42,30 @@ async function getAIConfig() {
   return config;
 }
 
+function estimateTokens(text: string): number {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+}
+
+function calculateCost(provider: string, promptTokens: number, completionTokens: number): number {
+  // Approximate costs per 1K tokens (as of 2024)
+  const costs = {
+    openai: { input: 0.0015, output: 0.002 }, // GPT-4o-mini
+    gemini: { input: 0.00015, output: 0.0006 }, // Gemini 1.5 Flash
+    deepseek: { input: 0.00014, output: 0.00028 } // DeepSeek Chat
+  };
+
+  const providerCosts = costs[provider as keyof typeof costs] || costs.openai;
+  return ((promptTokens / 1000) * providerCosts.input) + ((completionTokens / 1000) * providerCosts.output);
+}
+
 async function generateWithOpenAI(request: AIRequest, config: any) {
   const apiKey = config.openai_api_key;
   if (!apiKey) throw new Error('OpenAI API key not configured');
+
+  const model = request.model || config.openai_model || 'gpt-4o-mini';
+  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const promptTokens = estimateTokens(promptText);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -53,7 +74,7 @@ async function generateWithOpenAI(request: AIRequest, config: any) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: request.model || config.openai_model || 'gpt-4o-mini',
+      model,
       messages: [
         { role: 'system', content: request.systemPrompt || config.system_prompt },
         { role: 'user', content: request.prompt }
@@ -69,7 +90,21 @@ async function generateWithOpenAI(request: AIRequest, config: any) {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+  const completionTokens = estimateTokens(content);
+  const totalTokens = promptTokens + completionTokens;
+  const cost = calculateCost('openai', promptTokens, completionTokens);
+
+  return {
+    content,
+    usage: {
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens
+    },
+    model,
+    cost
+  };
 }
 
 async function generateWithGemini(request: AIRequest, config: any) {
@@ -77,6 +112,8 @@ async function generateWithGemini(request: AIRequest, config: any) {
   if (!apiKey) throw new Error('Gemini API key not configured');
 
   const model = request.model || config.gemini_model || 'gemini-1.5-flash';
+  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const promptTokens = estimateTokens(promptText);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
@@ -87,7 +124,7 @@ async function generateWithGemini(request: AIRequest, config: any) {
     body: JSON.stringify({
       contents: [{
         parts: [{
-          text: `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`
+          text: promptText
         }]
       }],
       generationConfig: {
@@ -103,12 +140,30 @@ async function generateWithGemini(request: AIRequest, config: any) {
   }
 
   const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  const content = data.candidates[0].content.parts[0].text;
+  const completionTokens = estimateTokens(content);
+  const totalTokens = promptTokens + completionTokens;
+  const cost = calculateCost('gemini', promptTokens, completionTokens);
+
+  return {
+    content,
+    usage: {
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens
+    },
+    model,
+    cost
+  };
 }
 
 async function generateWithDeepSeek(request: AIRequest, config: any) {
   const apiKey = config.deepseek_api_key;
   if (!apiKey) throw new Error('DeepSeek API key not configured');
+
+  const model = request.model || config.deepseek_model || 'deepseek-chat';
+  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const promptTokens = estimateTokens(promptText);
 
   const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
@@ -117,7 +172,7 @@ async function generateWithDeepSeek(request: AIRequest, config: any) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: request.model || config.deepseek_model || 'deepseek-chat',
+      model,
       messages: [
         { role: 'system', content: request.systemPrompt || config.system_prompt },
         { role: 'user', content: request.prompt }
@@ -133,7 +188,21 @@ async function generateWithDeepSeek(request: AIRequest, config: any) {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const content = data.choices[0].message.content;
+  const completionTokens = estimateTokens(content);
+  const totalTokens = promptTokens + completionTokens;
+  const cost = calculateCost('deepseek', promptTokens, completionTokens);
+
+  return {
+    content,
+    usage: {
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens
+    },
+    model,
+    cost
+  };
 }
 
 serve(async (req) => {
@@ -147,25 +216,28 @@ serve(async (req) => {
     
     const provider = request.provider || config.default_provider || 'openai';
     
-    let generatedContent: string;
+    let result: any;
     
     switch (provider) {
       case 'openai':
-        generatedContent = await generateWithOpenAI(request, config);
+        result = await generateWithOpenAI(request, config);
         break;
       case 'gemini':
-        generatedContent = await generateWithGemini(request, config);
+        result = await generateWithGemini(request, config);
         break;
       case 'deepseek':
-        generatedContent = await generateWithDeepSeek(request, config);
+        result = await generateWithDeepSeek(request, config);
         break;
       default:
         throw new Error(`Unsupported AI provider: ${provider}`);
     }
 
     return new Response(JSON.stringify({ 
-      content: generatedContent,
-      provider: provider 
+      content: result.content,
+      provider: provider,
+      usage: result.usage,
+      model: result.model,
+      cost: result.cost
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -14,6 +14,7 @@ import PaymentManagement from '@/components/admin/PaymentManagement';
 import ContentModeration from '@/components/admin/ContentModeration';
 import SystemSettings from '@/components/admin/SystemSettings';
 import AIConfiguration from '@/components/admin/AIConfiguration';
+import AIAnalytics from '@/components/admin/AIAnalytics';
 import { Shield, AlertTriangle } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -66,6 +67,8 @@ const AdminDashboard = () => {
         return <SystemSettings />;
       case 'ai':
         return <AIConfiguration />;
+      case 'ai-analytics':
+        return <AIAnalytics />;
       default:
         return <AdminStats />;
     }

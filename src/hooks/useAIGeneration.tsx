@@ -15,6 +15,13 @@ export interface AIGenerationRequest {
 export interface AIGenerationResponse {
   content: string;
   provider: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  model?: string;
+  cost?: number;
 }
 
 export const useAIGeneration = () => {
@@ -22,9 +29,28 @@ export const useAIGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastGeneration, setLastGeneration] = useState<AIGenerationResponse | null>(null);
 
+  const logAIUsage = async (response: AIGenerationResponse, articleId?: string, success: boolean = true, errorMessage?: string) => {
+    try {
+      await supabase.from('ai_usage_logs').insert({
+        article_id: articleId,
+        provider: response.provider,
+        model: response.model || 'unknown',
+        prompt_tokens: response.usage?.prompt_tokens || 0,
+        completion_tokens: response.usage?.completion_tokens || 0,
+        total_tokens: response.usage?.total_tokens || 0,
+        estimated_cost: response.cost || 0,
+        success,
+        error_message: errorMessage,
+      });
+    } catch (error) {
+      console.error('Failed to log AI usage:', error);
+    }
+  };
+
   const generateContent = async (request: AIGenerationRequest): Promise<AIGenerationResponse | null> => {
     try {
       setIsGenerating(true);
+      const startTime = Date.now();
       
       const { data, error } = await supabase.functions.invoke('ai-content-generator', {
         body: request
@@ -32,16 +58,31 @@ export const useAIGeneration = () => {
 
       if (error) throw error;
 
-      setLastGeneration(data);
+      const duration = Date.now() - startTime;
+      const response = { ...data, duration };
+      
+      setLastGeneration(response);
+      
+      // Log successful usage
+      await logAIUsage(response, undefined, true);
       
       toast({
         title: "Content Generated",
         description: `Successfully generated content using ${data.provider}`,
       });
 
-      return data;
+      return response;
     } catch (error: any) {
       console.error('Error generating AI content:', error);
+      
+      // Log failed usage
+      await logAIUsage(
+        { content: '', provider: request.provider || 'unknown' }, 
+        undefined, 
+        false, 
+        error.message
+      );
+      
       toast({
         title: "Generation Failed",
         description: error.message || "Failed to generate AI content",
