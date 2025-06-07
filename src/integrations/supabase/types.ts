@@ -148,6 +148,8 @@ export type Database = {
       }
       articles: {
         Row: {
+          ai_generated: boolean | null
+          ai_provider: string | null
           category: string | null
           content: string
           created_at: string
@@ -156,6 +158,7 @@ export type Database = {
           featured_image_url: string | null
           id: string
           meta_description: string | null
+          moderation_status: string | null
           payment_status: string | null
           publisher_id: string | null
           status: string | null
@@ -167,6 +170,8 @@ export type Database = {
           views_count: number | null
         }
         Insert: {
+          ai_generated?: boolean | null
+          ai_provider?: string | null
           category?: string | null
           content: string
           created_at?: string
@@ -175,6 +180,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           meta_description?: string | null
+          moderation_status?: string | null
           payment_status?: string | null
           publisher_id?: string | null
           status?: string | null
@@ -186,6 +192,8 @@ export type Database = {
           views_count?: number | null
         }
         Update: {
+          ai_generated?: boolean | null
+          ai_provider?: string | null
           category?: string | null
           content?: string
           created_at?: string
@@ -194,6 +202,7 @@ export type Database = {
           featured_image_url?: string | null
           id?: string
           meta_description?: string | null
+          moderation_status?: string | null
           payment_status?: string | null
           publisher_id?: string | null
           status?: string | null
@@ -210,6 +219,47 @@ export type Database = {
             columns: ["publisher_id"]
             isOneToOne: false
             referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_moderation: {
+        Row: {
+          article_id: string | null
+          created_at: string | null
+          feedback: string | null
+          id: string
+          moderated_at: string | null
+          moderator_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          moderated_at?: string | null
+          moderator_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          moderated_at?: string | null
+          moderator_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_moderation_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
             referencedColumns: ["id"]
           },
         ]
@@ -364,6 +414,42 @@ export type Database = {
           status?: string | null
           updated_at?: string
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      system_configurations: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_sensitive: boolean | null
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_sensitive?: boolean | null
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_sensitive?: boolean | null
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
