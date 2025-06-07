@@ -51,7 +51,7 @@ const ContentModeration = () => {
             title,
             content,
             user_id,
-            profiles!articles_user_id_fkey(
+            profiles(
               full_name, 
               email
             )
