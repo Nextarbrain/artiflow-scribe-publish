@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,66 +28,77 @@ const WriteArticle = () => {
   const [tags, setTags] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [currentArticleId, setCurrentArticleId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const totalAmount = selectedPublishers.reduce((sum, publisher) => sum + publisher.price_per_article, 0);
   const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
   useEffect(() => {
+    console.log('WriteArticle: useEffect triggered');
+    console.log('WriteArticle: user:', !!user);
+    console.log('WriteArticle: location.state:', location.state);
+    
     if (!user) {
       console.log('WriteArticle: No user, redirecting to auth');
       navigate('/auth');
       return;
     }
 
-    console.log('WriteArticle: User found, checking for publishers');
-    console.log('WriteArticle: location.state:', location.state);
-    
-    let publishersToUse: Publisher[] = [];
-    let dataSource = '';
+    // Function to restore publishers from different sources
+    const restorePublishers = () => {
+      console.log('WriteArticle: Starting publisher restoration');
+      
+      // First try: location state (from Auth.tsx navigation)
+      if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
+        const statePublishers = location.state.selectedPublishers;
+        console.log('WriteArticle: Found publishers in navigation state:', statePublishers.length);
+        
+        if (statePublishers.length > 0) {
+          console.log('WriteArticle: Using publishers from navigation state');
+          setSelectedPublishers(statePublishers);
+          setIsLoading(false);
+          
+          // Clean up localStorage since we got data from navigation
+          localStorage.removeItem('selectedPublishers');
+          console.log('WriteArticle: Cleaned localStorage after using navigation state');
+          return true;
+        }
+      }
 
-    // PRIORITY 1: Check location state first (from Auth.tsx)
-    if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
-      publishersToUse = location.state.selectedPublishers;
-      dataSource = 'location state';
-      console.log('WriteArticle: Found publishers in location state:', publishersToUse);
-    }
-    // PRIORITY 2: Check localStorage as fallback
-    else {
-      console.log('WriteArticle: No location state, checking localStorage');
+      // Second try: localStorage (fallback)
+      console.log('WriteArticle: Checking localStorage for publishers');
       const savedPublishers = localStorage.getItem('selectedPublishers');
       console.log('WriteArticle: localStorage value:', savedPublishers);
       
       if (savedPublishers) {
         try {
           const parsedPublishers = JSON.parse(savedPublishers);
+          console.log('WriteArticle: Parsed localStorage publishers:', parsedPublishers);
+          
           if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-            publishersToUse = parsedPublishers;
-            dataSource = 'localStorage';
-            console.log('WriteArticle: Successfully parsed publishers from localStorage:', publishersToUse);
+            console.log('WriteArticle: Using publishers from localStorage');
+            setSelectedPublishers(parsedPublishers);
+            setIsLoading(false);
+            
+            // Clean up localStorage after successful use
+            localStorage.removeItem('selectedPublishers');
+            console.log('WriteArticle: Cleaned localStorage after successful restoration');
+            return true;
           }
         } catch (error) {
-          console.error('WriteArticle: Error parsing saved publishers:', error);
+          console.error('WriteArticle: Error parsing localStorage publishers:', error);
           localStorage.removeItem('selectedPublishers');
         }
       }
-    }
-    
-    // If we have valid publishers, set them
-    if (publishersToUse.length > 0) {
-      console.log(`WriteArticle: Setting ${publishersToUse.length} publishers from ${dataSource}`);
-      setSelectedPublishers(publishersToUse);
-      
-      // Clean up localStorage only after successful restoration
-      if (dataSource === 'localStorage' || localStorage.getItem('selectedPublishers')) {
-        console.log('WriteArticle: Cleaning up localStorage after successful restoration');
-        localStorage.removeItem('selectedPublishers');
-      }
-    } else {
-      // No publishers found - redirect to selection
+
+      // No publishers found anywhere
       console.log('WriteArticle: No publishers found, redirecting to select-publisher');
       navigate('/select-publisher');
-      return;
-    }
+      return false;
+    };
+
+    // Restore publishers
+    restorePublishers();
   }, [user, location.state, navigate]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
@@ -183,6 +195,20 @@ const WriteArticle = () => {
   const handleSaveDraft = async () => {
     await saveArticle('writing');
   };
+
+  // Show loading state while checking for publishers
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <div className="container max-w-4xl py-8">
+          <div className="text-center">
+            <p>Loading your article setup...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!user) return null;
 
