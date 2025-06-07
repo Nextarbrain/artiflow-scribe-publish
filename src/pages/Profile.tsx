@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, User } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import Header from '@/components/Header';
+import AvatarUpload from '@/components/AvatarUpload';
 
 interface Profile {
   id: string;
@@ -24,7 +24,6 @@ const Profile = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -96,51 +95,10 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file || !user) return;
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please select an image file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Please select an image smaller than 5MB',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleAvatarUploaded = async (publicUrl: string) => {
+    if (!user) return;
     
     try {
-      setUploadingAvatar(true);
-      
-      // Generate a unique filename with user ID folder structure
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
-      
-      // Upload the file to Supabase Storage avatars bucket
-      const { error: uploadError } = await supabase
-        .storage
-        .from('avatars')
-        .upload(fileName, file);
-        
-      if (uploadError) throw uploadError;
-      
-      // Get the public URL
-      const { data: { publicUrl } } = supabase
-        .storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-      
       // Update user profile with new avatar URL
       await supabase
         .from('profiles')
@@ -158,20 +116,8 @@ const Profile = () => {
       // Update local state
       setProfile(prev => prev ? {...prev, avatar_url: publicUrl} : null);
       
-      toast({
-        title: 'Success',
-        description: 'Avatar updated successfully',
-      });
-      
     } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to upload avatar',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploadingAvatar(false);
+      console.error('Error updating avatar:', error);
     }
   };
 
@@ -185,7 +131,6 @@ const Profile = () => {
   };
 
   const getAvatarUrl = () => {
-    // Priority: profile avatar_url > user metadata avatar_url > user metadata avatar_url
     return profile?.avatar_url || user?.user_metadata?.avatar_url;
   };
 
@@ -228,36 +173,12 @@ const Profile = () => {
               <>
                 {/* Avatar */}
                 <div className="flex flex-col items-center justify-center space-y-3">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage 
-                        src={getAvatarUrl()} 
-                        alt={profile?.full_name || user.email || 'Avatar'} 
-                      />
-                      <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-2xl">
-                        {getInitials(profile?.full_name || user?.user_metadata?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-1 -right-1">
-                      <label htmlFor="avatar-upload" className="cursor-pointer">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-colors">
-                          {uploadingAvatar ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                        </div>
-                        <input
-                          id="avatar-upload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleAvatarUpload}
-                          disabled={uploadingAvatar}
-                        />
-                      </label>
-                    </div>
-                  </div>
+                  <AvatarUpload
+                    currentAvatar={getAvatarUrl()}
+                    onAvatarUploaded={handleAvatarUploaded}
+                    fallbackText={getInitials(profile?.full_name || user?.user_metadata?.full_name)}
+                    size="lg"
+                  />
                   <div className="text-center">
                     <h3 className="text-lg font-medium">
                       {profile?.full_name || user?.user_metadata?.full_name || 'User'}
