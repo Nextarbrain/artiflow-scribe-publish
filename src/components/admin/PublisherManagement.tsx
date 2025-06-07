@@ -23,7 +23,7 @@ const PublisherManagement = () => {
     price_per_article: 0,
     audience_size: 0,
     category: '',
-    status: 'pending' as 'active' | 'inactive' | 'pending',
+    status: 'pending' as string,
     contact_email: '',
     contact_person: '',
     payment_terms: '',
@@ -75,7 +75,7 @@ const PublisherManagement = () => {
       price_per_article: publisher.price_per_article,
       audience_size: publisher.audience_size || 0,
       category: publisher.category || '',
-      status: publisher.status,
+      status: publisher.status || 'pending',
       contact_email: publisher.contact_email || '',
       contact_person: publisher.contact_person || '',
       payment_terms: publisher.payment_terms || '',
@@ -90,13 +90,13 @@ const PublisherManagement = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
       active: "default",
       pending: "secondary",
       inactive: "destructive"
     };
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+    return <Badge variant={variants[status || 'pending'] || "secondary"}>{status || 'pending'}</Badge>;
   };
 
   return (
@@ -211,7 +211,7 @@ const PublisherManagement = () => {
               
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
-                <Select value={formData.status} onValueChange={(value: 'active' | 'inactive' | 'pending') => setFormData({...formData, status: value})}>
+                <Select value={formData.status} onValueChange={(value: string) => setFormData({...formData, status: value})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

@@ -126,7 +126,7 @@ export const useAdminManagement = () => {
           _action: 'create',
           _resource_type: 'publisher',
           _resource_id: data.id,
-          _new_values: publisherData
+          _new_values: publisherData as any
         });
       }
 
@@ -166,7 +166,7 @@ export const useAdminManagement = () => {
           _action: 'update',
           _resource_type: 'publisher',
           _resource_id: id,
-          _new_values: updates
+          _new_values: updates as any
         });
       }
 
@@ -266,7 +266,7 @@ export const useAdminManagement = () => {
           _action: 'update_status',
           _resource_type: 'user',
           _resource_id: userId,
-          _new_values: { status }
+          _new_values: { status } as any
         });
       }
 
@@ -333,7 +333,7 @@ export const useAdminManagement = () => {
           _action: 'update_status',
           _resource_type: 'article',
           _resource_id: articleId,
-          _new_values: { status }
+          _new_values: { status } as any
         });
       }
 
@@ -401,7 +401,7 @@ export const useAdminManagement = () => {
           _action: 'update_status',
           _resource_type: 'payment',
           _resource_id: paymentId,
-          _new_values: { status }
+          _new_values: { status } as any
         });
       }
 
