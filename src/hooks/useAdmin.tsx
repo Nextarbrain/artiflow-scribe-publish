@@ -19,22 +19,35 @@ export const useAdmin = () => {
       try {
         console.log('Checking admin status for user:', user.id);
         
+        // Use the security definer function to check admin status
         const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
+          .rpc('has_role', { 
+            _user_id: user.id, 
+            _role: 'admin' 
+          });
 
         if (error) {
-          console.error('Error checking admin status:', error);
-          // Don't throw error for RLS policy failures, just log and continue
-          setIsAdmin(false);
+          console.error('Error checking admin status with RPC:', error);
+          // Fallback to direct query if RPC fails
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
+
+          if (roleError) {
+            console.error('Error with fallback admin check:', roleError);
+            setIsAdmin(false);
+          } else {
+            setIsAdmin(!!roleData);
+          }
         } else {
           console.log('Admin check result:', data);
-          setIsAdmin(data && data.length > 0);
+          setIsAdmin(data === true);
         }
       } catch (error) {
-        console.error('Error checking admin status:', error);
+        console.error('Unexpected error checking admin status:', error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
