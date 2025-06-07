@@ -37,17 +37,39 @@ const WriteArticle = () => {
       return;
     }
 
-    // Get selected publishers from location state or localStorage
-    const publishers = location.state?.selectedPublishers || JSON.parse(localStorage.getItem('selectedPublishers') || '[]');
+    // Get selected publishers from location state first, then localStorage as fallback
+    let publishers = location.state?.selectedPublishers;
     
     if (!publishers || publishers.length === 0) {
+      // Check localStorage for saved publishers (from login flow)
+      const savedPublishers = localStorage.getItem('selectedPublishers');
+      console.log('WriteArticle: Checking localStorage for saved publishers:', savedPublishers);
+      
+      if (savedPublishers) {
+        try {
+          publishers = JSON.parse(savedPublishers);
+          console.log('WriteArticle: Found and parsed saved publishers:', publishers);
+        } catch (error) {
+          console.error('WriteArticle: Error parsing saved publishers:', error);
+          publishers = null;
+        }
+      }
+    }
+    
+    if (!publishers || publishers.length === 0) {
+      console.log('WriteArticle: No publishers found, redirecting to select-publisher');
       navigate('/select-publisher');
       return;
     }
 
+    console.log('WriteArticle: Setting publishers:', publishers);
     setSelectedPublishers(publishers);
-    // Clear from localStorage once used
-    localStorage.removeItem('selectedPublishers');
+    
+    // Clear from localStorage only after we've successfully used it
+    if (localStorage.getItem('selectedPublishers')) {
+      console.log('WriteArticle: Clearing localStorage after successful use');
+      localStorage.removeItem('selectedPublishers');
+    }
   }, [user, location.state, navigate]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
