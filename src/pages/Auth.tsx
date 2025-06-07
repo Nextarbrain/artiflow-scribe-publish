@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,6 @@ const Auth = () => {
           
           if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
             console.log('Auth: Navigating to write-article with publishers');
-            // Navigate with publishers data and also keep in localStorage as backup
             navigate('/write-article', { 
               state: { 
                 selectedPublishers: parsedPublishers,
@@ -70,9 +70,10 @@ const Auth = () => {
       }
 
       if (result.error) {
+        console.error('Auth error:', result.error);
         toast({
           title: "Error",
-          description: result.error.message,
+          description: result.error.message || "An authentication error occurred",
           variant: "destructive",
         });
       } else if (!isLogin) {
@@ -82,6 +83,7 @@ const Auth = () => {
         });
       }
     } catch (error) {
+      console.error('Unexpected auth error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -97,13 +99,15 @@ const Auth = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
+        console.error('Google sign in error:', error);
         toast({
           title: "Error",
-          description: error.message,
+          description: error.message || "Failed to sign in with Google",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Unexpected Google sign in error:', error);
       toast({
         title: "Error",
         description: "Failed to sign in with Google",

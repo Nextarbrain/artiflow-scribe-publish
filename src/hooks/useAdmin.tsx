@@ -17,18 +17,22 @@ export const useAdmin = () => {
       }
 
       try {
+        console.log('Checking admin status for user:', user.id);
+        
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
+          .eq('role', 'admin');
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Error checking admin status:', error);
+          // Don't throw error for RLS policy failures, just log and continue
+          setIsAdmin(false);
+        } else {
+          console.log('Admin check result:', data);
+          setIsAdmin(data && data.length > 0);
         }
-
-        setIsAdmin(!!data);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
@@ -40,21 +44,32 @@ export const useAdmin = () => {
     checkAdminStatus();
   }, [user]);
 
-  const makeUserAdmin = async (email: string) => {
-    if (!isAdmin) return { error: 'Unauthorized' };
+  const makeUserAdmin = async (targetUserId: string) => {
+    if (!isAdmin || !user) {
+      console.error('Unauthorized: User is not admin or not authenticated');
+      return { error: 'Unauthorized' };
+    }
 
     try {
-      // This is a simplified version - in production you'd want more security
+      console.log('Making user admin:', targetUserId);
+      
       const { error } = await supabase
         .from('user_roles')
         .insert({ 
-          user_id: user?.id, // This would need to be the target user's ID
+          user_id: targetUserId,
           role: 'admin' 
         });
 
-      return { error };
+      if (error) {
+        console.error('Error making user admin:', error);
+        return { error: error.message };
+      }
+
+      console.log('Successfully made user admin');
+      return { error: null };
     } catch (error) {
-      return { error };
+      console.error('Error making user admin:', error);
+      return { error: 'Failed to make user admin' };
     }
   };
 

@@ -1,0 +1,10 @@
+
+{
+  "name": "ArticleAI",
+  "description": "AI-powered article creation and publishing platform",
+  "version": "1.0.0",
+  "author": "ArticleAI Team",
+  "keywords": ["article", "ai", "publishing", "content creation"],
+  "theme_color": "#3b82f6",
+  "background_color": "#ffffff"
+}
