@@ -23,18 +23,26 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      // Check if user was in the middle of publisher selection flow
+      console.log('Auth: User logged in, checking for saved publishers');
+      
+      // Check for saved publishers in localStorage
       const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('Auth: User logged in, checking saved publishers:', savedPublishers);
+      console.log('Auth: savedPublishers from localStorage:', savedPublishers);
       
       if (savedPublishers) {
         try {
           const parsedPublishers = JSON.parse(savedPublishers);
+          console.log('Auth: Parsed publishers:', parsedPublishers);
+          
           if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-            console.log('Auth: Found saved publishers, navigating to write-article with state:', parsedPublishers);
-            // Pass the publishers in navigation state AND keep in localStorage for backup
+            console.log('Auth: Navigating to write-article with publishers');
+            // Navigate with publishers data and also keep in localStorage as backup
             navigate('/write-article', { 
-              state: { selectedPublishers: parsedPublishers }
+              state: { 
+                selectedPublishers: parsedPublishers,
+                fromAuth: true 
+              },
+              replace: true 
             });
             return;
           }
@@ -45,8 +53,7 @@ const Auth = () => {
       }
       
       console.log('Auth: No saved publishers, navigating to dashboard');
-      // Normal login, go to dashboard
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 

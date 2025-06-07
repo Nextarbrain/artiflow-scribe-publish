@@ -33,26 +33,28 @@ const WriteArticle = () => {
 
   useEffect(() => {
     if (!user) {
+      console.log('WriteArticle: No user, redirecting to auth');
       navigate('/auth');
       return;
     }
 
-    console.log('WriteArticle: Starting publisher restoration...');
+    console.log('WriteArticle: User found, checking for publishers');
     console.log('WriteArticle: location.state:', location.state);
     
-    let publishersToUse = null;
+    let publishersToUse: Publisher[] = [];
     let dataSource = '';
 
-    // PRIORITY 1: Check location state (from Auth.tsx navigation)
-    if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers) && location.state.selectedPublishers.length > 0) {
+    // PRIORITY 1: Check location state first (from Auth.tsx)
+    if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
       publishersToUse = location.state.selectedPublishers;
       dataSource = 'location state';
-      console.log('WriteArticle: Using publishers from location state:', publishersToUse);
+      console.log('WriteArticle: Found publishers in location state:', publishersToUse);
     }
     // PRIORITY 2: Check localStorage as fallback
     else {
+      console.log('WriteArticle: No location state, checking localStorage');
       const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('WriteArticle: savedPublishers from localStorage:', savedPublishers);
+      console.log('WriteArticle: localStorage value:', savedPublishers);
       
       if (savedPublishers) {
         try {
@@ -69,20 +71,19 @@ const WriteArticle = () => {
       }
     }
     
-    // If we have publishers to use, set them in state
-    if (publishersToUse && publishersToUse.length > 0) {
-      console.log(`WriteArticle: Setting ${publishersToUse.length} publishers in state from ${dataSource}:`, publishersToUse);
+    // If we have valid publishers, set them
+    if (publishersToUse.length > 0) {
+      console.log(`WriteArticle: Setting ${publishersToUse.length} publishers from ${dataSource}`);
       setSelectedPublishers(publishersToUse);
       
-      // Clean up localStorage after successful restoration (regardless of source)
-      const savedData = localStorage.getItem('selectedPublishers');
-      if (savedData) {
+      // Clean up localStorage only after successful restoration
+      if (dataSource === 'localStorage' || localStorage.getItem('selectedPublishers')) {
         console.log('WriteArticle: Cleaning up localStorage after successful restoration');
         localStorage.removeItem('selectedPublishers');
       }
     } else {
-      // No publishers found anywhere - redirect to publisher selection
-      console.log('WriteArticle: No publishers found anywhere, redirecting to select-publisher');
+      // No publishers found - redirect to selection
+      console.log('WriteArticle: No publishers found, redirecting to select-publisher');
       navigate('/select-publisher');
       return;
     }
