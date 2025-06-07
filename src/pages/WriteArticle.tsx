@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { usePublishers } from '@/hooks/usePublishers';
+import { Publisher } from '@/hooks/usePublishers';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Save, Eye, ArrowLeft } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,10 +17,9 @@ const WriteArticle = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { data: publishers } = usePublishers();
   const { toast } = useToast();
 
-  const [publisherId, setPublisherId] = useState<string>('');
+  const [selectedPublishers, setSelectedPublishers] = useState<Publisher[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [excerpt, setExcerpt] = useState('');
@@ -30,7 +28,8 @@ const WriteArticle = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentArticleId, setCurrentArticleId] = useState<string | null>(null);
 
-  const selectedPublisher = publishers?.find(p => p.id === publisherId);
+  const totalAmount = selectedPublishers.reduce((sum, publisher) => sum + publisher.price_per_article, 0);
+  const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
   useEffect(() => {
     if (!user) {
@@ -38,21 +37,21 @@ const WriteArticle = () => {
       return;
     }
 
-    // Get publisher ID from location state or localStorage
-    const selectedPublisherId = location.state?.publisherId || localStorage.getItem('selectedPublisherId');
+    // Get selected publishers from location state or localStorage
+    const publishers = location.state?.selectedPublishers || JSON.parse(localStorage.getItem('selectedPublishers') || '[]');
     
-    if (!selectedPublisherId) {
+    if (!publishers || publishers.length === 0) {
       navigate('/select-publisher');
       return;
     }
 
-    setPublisherId(selectedPublisherId);
+    setSelectedPublishers(publishers);
     // Clear from localStorage once used
-    localStorage.removeItem('selectedPublisherId');
+    localStorage.removeItem('selectedPublishers');
   }, [user, location.state, navigate]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
-    if (!user || !publisherId) return null;
+    if (!user || selectedPublishers.length === 0) return null;
 
     setIsSaving(true);
     try {
@@ -63,9 +62,8 @@ const WriteArticle = () => {
         meta_description: metaDescription,
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         user_id: user.id,
-        publisher_id: publisherId,
         draft_stage: stage,
-        total_cost: selectedPublisher?.price_per_article || 0,
+        total_cost: totalAmount,
         status: 'draft'
       };
 
@@ -89,13 +87,31 @@ const WriteArticle = () => {
 
       if (result.error) throw result.error;
 
-      setCurrentArticleId(result.data.id);
+      const articleId = result.data.id;
+      setCurrentArticleId(articleId);
+
+      // Save article-publisher relationships
+      if (!currentArticleId) {
+        // Only create relationships for new articles
+        const articlePublisherData = selectedPublishers.map(publisher => ({
+          article_id: articleId,
+          publisher_id: publisher.id,
+          cost: publisher.price_per_article
+        }));
+
+        const { error: relationError } = await supabase
+          .from('article_publishers')
+          .insert(articlePublisherData);
+
+        if (relationError) throw relationError;
+      }
+
       toast({
         title: "Article saved",
         description: "Your article has been saved as a draft.",
       });
 
-      return result.data.id;
+      return articleId;
     } catch (error) {
       console.error('Error saving article:', error);
       toast({
@@ -121,7 +137,7 @@ const WriteArticle = () => {
 
     const articleId = await saveArticle('preview');
     if (articleId) {
-      navigate('/preview-article', { state: { articleId } });
+      navigate('/preview-article', { state: { articleId, selectedPublishers } });
     }
   };
 
@@ -145,19 +161,30 @@ const WriteArticle = () => {
             Back to Publishers
           </Button>
 
-          {selectedPublisher && (
+          {selectedPublishers.length > 0 && (
             <Card className="mb-6">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Publishing to {selectedPublisher.name}</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Publishing to {selectedPublishers.length} Publisher{selectedPublishers.length > 1 ? 's' : ''}
+                    </CardTitle>
                     <CardDescription>
-                      Cost: ${(selectedPublisher.price_per_article / 100).toFixed(2)}
+                      Total Cost: {formatPrice(totalAmount)}
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary">{selectedPublisher.category}</Badge>
                 </div>
               </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2">
+                  {selectedPublishers.map(publisher => (
+                    <Badge key={publisher.id} variant="outline" className="flex items-center gap-1">
+                      {publisher.name} - {formatPrice(publisher.price_per_article)}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
           )}
         </div>
@@ -166,7 +193,7 @@ const WriteArticle = () => {
           <CardHeader>
             <CardTitle>Write Your Article</CardTitle>
             <CardDescription>
-              Create your article content. Don't worry, everything is automatically saved as you type.
+              Create your article content. Everything is automatically saved as you type.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -6,9 +6,18 @@ import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, CreditCard, Clock, Eye, Share2 } from 'lucide-react';
+import { ArrowLeft, Edit, CreditCard, Clock, Eye, Share2, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+interface ArticlePublisher {
+  publisher: {
+    id: string;
+    name: string;
+    category: string | null;
+  };
+  cost: number;
+}
 
 interface Article {
   id: string;
@@ -18,11 +27,7 @@ interface Article {
   meta_description: string | null;
   tags: string[] | null;
   total_cost: number;
-  publisher: {
-    id: string;
-    name: string;
-    category: string | null;
-  };
+  article_publishers: ArticlePublisher[];
 }
 
 const PreviewArticle = () => {
@@ -33,6 +38,8 @@ const PreviewArticle = () => {
   
   const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
   useEffect(() => {
     if (!user) {
@@ -61,7 +68,10 @@ const PreviewArticle = () => {
           meta_description,
           tags,
           total_cost,
-          publisher:publishers(id, name, category)
+          article_publishers(
+            cost,
+            publisher:publishers(id, name, category)
+          )
         `)
         .eq('id', articleId)
         .eq('user_id', user?.id)
@@ -84,7 +94,13 @@ const PreviewArticle = () => {
 
   const handleEditArticle = () => {
     if (article) {
-      navigate('/write-article', { state: { publisherId: article.publisher.id, articleId: article.id } });
+      const selectedPublishers = article.article_publishers.map(ap => ({
+        id: ap.publisher.id,
+        name: ap.publisher.name,
+        category: ap.publisher.category,
+        price_per_article: ap.cost
+      }));
+      navigate('/write-article', { state: { selectedPublishers, articleId: article.id } });
     }
   };
 
@@ -117,7 +133,15 @@ const PreviewArticle = () => {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => navigate('/write-article', { state: { publisherId: article.publisher.id } })}
+            onClick={() => {
+              const selectedPublishers = article.article_publishers.map(ap => ({
+                id: ap.publisher.id,
+                name: ap.publisher.name,
+                category: ap.publisher.category,
+                price_per_article: ap.cost
+              }));
+              navigate('/write-article', { state: { selectedPublishers } });
+            }}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -125,13 +149,22 @@ const PreviewArticle = () => {
           </Button>
 
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
-            <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+              <Users className="w-5 h-5" />
               Ready to Publish?
             </h2>
-            <p className="text-blue-700 dark:text-blue-200">
-              Your article will be published on <strong>{article.publisher.name}</strong> for{' '}
-              <strong>${(article.total_cost / 100).toFixed(2)}</strong>
+            <p className="text-blue-700 dark:text-blue-200 mb-3">
+              Your article will be published to <strong>{article.article_publishers.length} publisher{article.article_publishers.length > 1 ? 's' : ''}</strong> for{' '}
+              <strong>{formatPrice(article.total_cost)}</strong>
             </p>
+            <div className="space-y-2">
+              {article.article_publishers.map((ap, index) => (
+                <div key={index} className="flex justify-between items-center bg-white dark:bg-gray-800 p-2 rounded">
+                  <span className="text-sm font-medium">{ap.publisher.name}</span>
+                  <Badge variant="outline">{formatPrice(ap.cost)}</Badge>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -139,11 +172,9 @@ const PreviewArticle = () => {
           {/* Article Header */}
           <div className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-700 p-8">
             <div className="flex items-center space-x-4 mb-4">
-              {article.publisher.category && (
-                <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                  {article.publisher.category}
-                </Badge>
-              )}
+              <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                {article.article_publishers.length} Publisher{article.article_publishers.length > 1 ? 's' : ''}
+              </Badge>
               <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm">
                 <Clock className="w-4 h-4 mr-1" />
                 5 min read
@@ -159,7 +190,6 @@ const PreviewArticle = () => {
             )}
           </div>
 
-          {/* Article Content */}
           <CardContent className="p-8">
             <div className="prose prose-lg dark:prose-invert max-w-none">
               <div 
@@ -168,7 +198,6 @@ const PreviewArticle = () => {
               />
             </div>
 
-            {/* Article Tags */}
             {article.tags && article.tags.length > 0 && (
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex flex-wrap gap-2">
@@ -181,7 +210,6 @@ const PreviewArticle = () => {
               </div>
             )}
 
-            {/* Article Footer */}
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center space-x-4 text-gray-500 dark:text-gray-400">
                 <div className="flex items-center">
@@ -194,13 +222,12 @@ const PreviewArticle = () => {
                 </div>
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                Will be published on {article.publisher.name}
+                Publishing to {article.article_publishers.length} publisher{article.article_publishers.length > 1 ? 's' : ''}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
         <div className="flex gap-4 justify-center">
           <Button 
             variant="outline"
@@ -217,7 +244,7 @@ const PreviewArticle = () => {
             className="bg-green-600 hover:bg-green-700"
           >
             <CreditCard className="w-4 h-4 mr-2" />
-            Pay to Publish (${(article.total_cost / 100).toFixed(2)})
+            Pay to Publish ({formatPrice(article.total_cost)})
           </Button>
         </div>
       </div>

@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      article_publishers: {
+        Row: {
+          article_id: string
+          cost: number
+          created_at: string
+          id: string
+          publisher_id: string
+        }
+        Insert: {
+          article_id: string
+          cost: number
+          created_at?: string
+          id?: string
+          publisher_id: string
+        }
+        Update: {
+          article_id?: string
+          cost?: number
+          created_at?: string
+          id?: string
+          publisher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_publishers_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_publishers_publisher_id_fkey"
+            columns: ["publisher_id"]
+            isOneToOne: false
+            referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           category: string | null
@@ -83,9 +122,11 @@ export type Database = {
           article_id: string
           created_at: string
           id: string
+          publisher_breakdown: Json | null
           publisher_id: string
           status: string
           stripe_payment_intent_id: string | null
+          total_publishers: number | null
           updated_at: string
           user_id: string
         }
@@ -94,9 +135,11 @@ export type Database = {
           article_id: string
           created_at?: string
           id?: string
+          publisher_breakdown?: Json | null
           publisher_id: string
           status?: string
           stripe_payment_intent_id?: string | null
+          total_publishers?: number | null
           updated_at?: string
           user_id: string
         }
@@ -105,9 +148,11 @@ export type Database = {
           article_id?: string
           created_at?: string
           id?: string
+          publisher_breakdown?: Json | null
           publisher_id?: string
           status?: string
           stripe_payment_intent_id?: string | null
+          total_publishers?: number | null
           updated_at?: string
           user_id?: string
         }

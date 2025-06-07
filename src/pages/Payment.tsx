@@ -5,18 +5,24 @@ import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, CreditCard, CheckCircle, XCircle, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+interface ArticlePublisher {
+  publisher: {
+    id: string;
+    name: string;
+  };
+  cost: number;
+}
 
 interface Article {
   id: string;
   title: string;
   total_cost: number;
-  publisher: {
-    id: string;
-    name: string;
-  };
+  article_publishers: ArticlePublisher[];
 }
 
 const Payment = () => {
@@ -28,6 +34,8 @@ const Payment = () => {
   const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
   useEffect(() => {
     if (!user) {
@@ -52,7 +60,10 @@ const Payment = () => {
           id,
           title,
           total_cost,
-          publisher:publishers(id, name)
+          article_publishers(
+            cost,
+            publisher:publishers(id, name)
+          )
         `)
         .eq('id', articleId)
         .eq('user_id', user?.id)
@@ -99,16 +110,22 @@ const Payment = () => {
         .insert({
           user_id: user?.id,
           article_id: article.id,
-          publisher_id: article.publisher.id,
+          publisher_id: article.article_publishers[0]?.publisher.id, // First publisher for backward compatibility
           amount: article.total_cost,
-          status: 'completed'
+          status: 'completed',
+          total_publishers: article.article_publishers.length,
+          publisher_breakdown: article.article_publishers.map(ap => ({
+            publisher_id: ap.publisher.id,
+            publisher_name: ap.publisher.name,
+            cost: ap.cost
+          }))
         });
 
       if (paymentError) throw paymentError;
 
       toast({
         title: "Payment Successful!",
-        description: "Your article has been published successfully.",
+        description: `Your article has been published to ${article.article_publishers.length} publisher${article.article_publishers.length > 1 ? 's' : ''} successfully.`,
       });
 
       navigate('/dashboard');
@@ -190,23 +207,34 @@ const Payment = () => {
             <CreditCard className="w-12 h-12 mx-auto text-blue-600 mb-4" />
             <CardTitle className="text-2xl">Complete Your Payment</CardTitle>
             <CardDescription>
-              You're almost done! Pay to publish your article on {article.publisher.name}
+              You're almost done! Pay to publish your article to {article.article_publishers.length} publisher{article.article_publishers.length > 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6">
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Order Summary</h3>
-              <div className="space-y-2">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Order Summary
+              </h3>
+              <div className="space-y-3">
                 <div className="flex justify-between">
                   <span>Article: "{article.title}"</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Publisher: {article.publisher.name}</span>
+                
+                <div className="border-t pt-2 space-y-2">
+                  <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Publishing to:</h4>
+                  {article.article_publishers.map((ap, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm">{ap.publisher.name}</span>
+                      <Badge variant="outline">{formatPrice(ap.cost)}</Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between text-lg font-semibold border-t pt-2">
-                  <span>Total:</span>
-                  <span>${(article.total_cost / 100).toFixed(2)}</span>
+                
+                <div className="flex justify-between text-lg font-semibold border-t pt-3">
+                  <span>Total ({article.article_publishers.length} publisher{article.article_publishers.length > 1 ? 's' : ''}):</span>
+                  <span>{formatPrice(article.total_cost)}</span>
                 </div>
               </div>
             </div>
@@ -216,7 +244,7 @@ const Payment = () => {
                 What happens next?
               </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-200 space-y-1">
-                <li>• Your article will be published immediately</li>
+                <li>• Your article will be published to all {article.article_publishers.length} selected publisher{article.article_publishers.length > 1 ? 's' : ''} immediately</li>
                 <li>• You'll receive a confirmation email</li>
                 <li>• The article will appear in your dashboard</li>
               </ul>
@@ -246,7 +274,7 @@ const Payment = () => {
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Pay ${(article.total_cost / 100).toFixed(2)}
+                    Pay {formatPrice(article.total_cost)}
                   </>
                 )}
               </Button>
