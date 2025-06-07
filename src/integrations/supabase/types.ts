@@ -9,6 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      admin_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          permissions: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_user_roles: {
+        Row: {
+          admin_role_id: string
+          assigned_at: string
+          assigned_by: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          admin_role_id: string
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          admin_role_id?: string
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_user_roles_admin_role_id_fkey"
+            columns: ["admin_role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_publishers: {
         Row: {
           article_id: string
@@ -176,26 +274,41 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          country: string | null
           created_at: string
           email: string | null
+          email_verified: boolean | null
           full_name: string | null
           id: string
+          last_login_at: string | null
+          phone: string | null
+          status: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean | null
           full_name?: string | null
           id: string
+          last_login_at?: string | null
+          phone?: string | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean | null
           full_name?: string | null
           id?: string
+          last_login_at?: string | null
+          phone?: string | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -204,38 +317,86 @@ export type Database = {
         Row: {
           audience_size: number | null
           category: string | null
+          contact_email: string | null
+          contact_person: string | null
           created_at: string
           description: string | null
           id: string
           logo_url: string | null
           name: string
+          notes: string | null
+          payment_terms: string | null
           price_per_article: number
+          status: string | null
           updated_at: string
           website_url: string | null
         }
         Insert: {
           audience_size?: number | null
           category?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          notes?: string | null
+          payment_terms?: string | null
           price_per_article: number
+          status?: string | null
           updated_at?: string
           website_url?: string | null
         }
         Update: {
           audience_size?: number | null
           category?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          notes?: string | null
+          payment_terms?: string | null
           price_per_article?: number
+          status?: string | null
           updated_at?: string
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string
+          value: Json
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by: string
+          value: Json
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string
+          value?: Json
         }
         Relationships: []
       }
@@ -265,11 +426,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_admin_role: {
+        Args: { _user_id: string; _role_name: string }
+        Returns: boolean
+      }
       has_role: {
         Args:
           | { _user_id: string; _role: Database["public"]["Enums"]["app_role"] }
           | { user_id: number; role_name: string }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          _admin_user_id: string
+          _action: string
+          _resource_type: string
+          _resource_id?: string
+          _old_values?: Json
+          _new_values?: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

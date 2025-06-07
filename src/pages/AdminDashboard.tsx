@@ -1,106 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import Header from '@/components/Header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Users, FileText, Shield, Settings, Crown, Plus } from 'lucide-react';
+import AdminStats from '@/components/admin/AdminStats';
+import PublisherManagement from '@/components/admin/PublisherManagement';
+import UserManagement from '@/components/admin/UserManagement';
+import ArticleManagement from '@/components/admin/ArticleManagement';
+import PaymentManagement from '@/components/admin/PaymentManagement';
+import { Crown, BarChart3, Building2, Users, FileText, CreditCard, Settings, Shield } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
-  const { toast } = useToast();
-  
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalArticles: 0,
-    publishedArticles: 0,
-    draftArticles: 0
-  });
-  const [demoEmail, setDemoEmail] = useState('admin@demo.com');
-  const [creatingDemo, setCreatingDemo] = useState(false);
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchStats();
-    }
-  }, [isAdmin]);
-
-  const fetchStats = async () => {
-    try {
-      // Get articles stats
-      const { data: articles } = await supabase
-        .from('articles')
-        .select('status');
-
-      // Get users count
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id');
-
-      const publishedCount = articles?.filter(a => a.status === 'published').length || 0;
-      const draftCount = articles?.filter(a => a.status === 'draft').length || 0;
-
-      setStats({
-        totalUsers: profiles?.length || 0,
-        totalArticles: articles?.length || 0,
-        publishedArticles: publishedCount,
-        draftArticles: draftCount
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const createDemoAdmin = async () => {
-    setCreatingDemo(true);
-    try {
-      // Create demo user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email: demoEmail,
-        password: 'demo123456',
-        options: {
-          data: {
-            full_name: 'Demo Admin'
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Add admin role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: 'admin'
-          });
-
-        if (roleError) throw roleError;
-
-        toast({
-          title: "Demo admin created",
-          description: `Demo admin account created with email: ${demoEmail} and password: demo123456`,
-        });
-      }
-    } catch (error: any) {
-      console.error('Error creating demo admin:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create demo admin",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingDemo(false);
-    }
-  };
+  const [activeTab, setActiveTab] = useState('overview');
 
   if (adminLoading) {
     return (
@@ -151,7 +68,7 @@ const AdminDashboard = () => {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
@@ -160,119 +77,73 @@ const AdminDashboard = () => {
               Admin Dashboard
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Manage your ArticleAI platform
+              Complete platform management and analytics
             </p>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Users
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stats.totalUsers}
-                  </p>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="publishers" className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Publishers
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="articles" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Articles
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payments
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <AdminStats />
+            </TabsContent>
+
+            <TabsContent value="publishers">
+              <PublisherManagement />
+            </TabsContent>
+
+            <TabsContent value="users">
+              <UserManagement />
+            </TabsContent>
+
+            <TabsContent value="articles">
+              <ArticleManagement />
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <PaymentManagement />
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">System Settings</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  System configuration settings will be implemented here.
+                </p>
+                <div className="mt-4 space-y-4">
+                  <Button variant="outline">Platform Configuration</Button>
+                  <Button variant="outline">Email Settings</Button>
+                  <Button variant="outline">Payment Configuration</Button>
+                  <Button variant="outline">Security Settings</Button>
                 </div>
-                <Users className="w-8 h-8 text-blue-500" />
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Articles
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stats.totalArticles}
-                  </p>
-                </div>
-                <FileText className="w-8 h-8 text-green-500" />
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Published
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stats.publishedArticles}
-                  </p>
-                </div>
-                <Badge className="bg-green-100 text-green-800">Live</Badge>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Drafts
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {stats.draftArticles}
-                  </p>
-                </div>
-                <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>
-              </div>
-            </Card>
-          </div>
-
-          {/* Demo Admin Creation */}
-          <Card className="p-6 mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Settings className="w-5 h-5" />
-              <h2 className="text-lg font-semibold">Create Demo Admin</h2>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Create a demo admin account for testing purposes.
-            </p>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2">Demo Admin Email</label>
-                <Input
-                  type="email"
-                  value={demoEmail}
-                  onChange={(e) => setDemoEmail(e.target.value)}
-                  placeholder="admin@demo.com"
-                />
-              </div>
-              <Button 
-                onClick={createDemoAdmin}
-                disabled={creatingDemo || !demoEmail}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {creatingDemo ? 'Creating...' : 'Create Demo Admin'}
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Password will be set to: demo123456
-            </p>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Button variant="outline" className="justify-start">
-                <Users className="w-4 h-4 mr-2" />
-                Manage Users
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <FileText className="w-4 h-4 mr-2" />
-                Review Articles
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <Settings className="w-4 h-4 mr-2" />
-                System Settings
-              </Button>
-            </div>
-          </Card>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
     </ThemeProvider>
