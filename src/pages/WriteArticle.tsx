@@ -37,6 +37,7 @@ const WriteArticle = () => {
   // Save form data to session storage whenever it changes
   useEffect(() => {
     if (user && selectedPublishers.length > 0) {
+      console.log('WriteArticle: Saving form data to session');
       saveUserSession({
         selectedPublishers,
         currentRoute: '/write-article',
@@ -53,7 +54,7 @@ const WriteArticle = () => {
 
   useEffect(() => {
     console.log('WriteArticle: Component mounted');
-    console.log('WriteArticle: User authenticated:', !!user);
+    console.log('WriteArticle: User:', !!user);
     console.log('WriteArticle: Location state:', location.state);
     
     if (!user) {
@@ -74,15 +75,15 @@ const WriteArticle = () => {
           console.log('WriteArticle: Using publishers from navigation state');
           setSelectedPublishers(statePublishers);
           
-          // Restore form data from session if available
-          const savedSession = getUserSession();
-          if (savedSession?.formData) {
-            console.log('WriteArticle: Restoring form data from session');
-            setTitle(savedSession.formData.title || '');
-            setContent(savedSession.formData.content || '');
-            setExcerpt(savedSession.formData.excerpt || '');
-            setMetaDescription(savedSession.formData.metaDescription || '');
-            setTags(savedSession.formData.tags || '');
+          // Restore form data from navigation state or session
+          const formData = location.state.formData || getUserSession()?.formData;
+          if (formData) {
+            console.log('WriteArticle: Restoring form data');
+            setTitle(formData.title || '');
+            setContent(formData.content || '');
+            setExcerpt(formData.excerpt || '');
+            setMetaDescription(formData.metaDescription || '');
+            setTags(formData.tags || '');
           }
           
           setIsLoading(false);
@@ -103,14 +104,15 @@ const WriteArticle = () => {
       const savedSession = getUserSession();
       
       if (savedSession?.selectedPublishers) {
-        console.log('WriteArticle: Found complete session:', savedSession);
+        console.log('WriteArticle: Found session with publishers:', savedSession.selectedPublishers.length);
         
         if (Array.isArray(savedSession.selectedPublishers) && savedSession.selectedPublishers.length > 0) {
-          console.log('WriteArticle: Restoring complete session');
+          console.log('WriteArticle: Restoring from session storage');
           setSelectedPublishers(savedSession.selectedPublishers);
           
           // Restore form data
           if (savedSession.formData) {
+            console.log('WriteArticle: Restoring form data from session');
             setTitle(savedSession.formData.title || '');
             setContent(savedSession.formData.content || '');
             setExcerpt(savedSession.formData.excerpt || '');
@@ -129,7 +131,7 @@ const WriteArticle = () => {
       }
 
       // No session found - redirect to selection
-      console.log('WriteArticle: No session found, redirecting to select-publisher');
+      console.log('WriteArticle: No valid session found, redirecting to select-publisher');
       toast({
         title: "No Publishers Selected",
         description: "Please select publishers to write for.",
@@ -139,8 +141,10 @@ const WriteArticle = () => {
       return false;
     };
 
-    // Restore session
-    restoreSession();
+    // Add a small delay to ensure all state is ready
+    setTimeout(() => {
+      restoreSession();
+    }, 100);
   }, [user, location.state, navigate, toast]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {

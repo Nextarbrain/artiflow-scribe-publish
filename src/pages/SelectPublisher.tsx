@@ -21,10 +21,13 @@ const SelectPublisher = () => {
 
   // Restore selected publishers on component mount
   useEffect(() => {
+    console.log('SelectPublisher: Component mounted, checking for saved session');
     const savedSession = getUserSession();
     if (savedSession?.selectedPublishers) {
-      console.log('SelectPublisher: Restoring selected publishers from session');
+      console.log('SelectPublisher: Restoring selected publishers from session:', savedSession.selectedPublishers.length);
       setSelectedPublishers(savedSession.selectedPublishers);
+    } else {
+      console.log('SelectPublisher: No saved publishers found');
     }
   }, []);
 
@@ -37,9 +40,10 @@ const SelectPublisher = () => {
       updatedPublishers = selectedPublishers.filter(p => p.id !== publisher.id);
     }
     
+    console.log('SelectPublisher: Updated publishers:', updatedPublishers.length);
     setSelectedPublishers(updatedPublishers);
     
-    // Save to session storage
+    // Save to session storage immediately
     saveUserSession({
       selectedPublishers: updatedPublishers,
       currentRoute: '/select-publisher'
@@ -56,9 +60,11 @@ const SelectPublisher = () => {
       return;
     }
 
+    console.log('SelectPublisher: Continue clicked with publishers:', selectedPublishers.length);
+
     if (!user) {
       // Save complete session before redirecting to auth
-      console.log('SelectPublisher: User not logged in, saving complete session');
+      console.log('SelectPublisher: User not logged in, saving session and redirecting to auth');
       saveUserSession({
         selectedPublishers,
         currentRoute: '/select-publisher'
@@ -74,7 +80,12 @@ const SelectPublisher = () => {
     }
 
     // User is logged in, proceed directly to article creation
-    console.log('SelectPublisher: User logged in, navigating to write-article');
+    console.log('SelectPublisher: User logged in, saving session and navigating to write-article');
+    saveUserSession({
+      selectedPublishers,
+      currentRoute: '/write-article'
+    });
+    
     toast({
       title: "Ready to Write!",
       description: `Proceeding with ${selectedPublishers.length} selected publisher${selectedPublishers.length > 1 ? 's' : ''}.`,

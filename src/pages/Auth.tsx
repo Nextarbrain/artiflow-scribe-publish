@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,77 +24,46 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Auth: useEffect triggered - User:', !!user, 'Session:', !!session, 'Loading:', authLoading);
+    
     // Only attempt redirect if we have a valid authenticated user and haven't already attempted
     if (user && session?.access_token && !authLoading && !redirectAttempted) {
-      console.log('Auth: User authenticated with valid session');
-      console.log('Auth: Session access token exists:', !!session.access_token);
-      console.log('Auth: User ID:', user.id);
-      
+      console.log('Auth: User authenticated, starting redirect process');
       setRedirectAttempted(true);
       
-      // Small delay to ensure session is fully established
+      // Add a longer delay to ensure session is fully established
       setTimeout(() => {
-        // Check for saved session
         const savedSession = getUserSession();
-        console.log('Auth: Checking for saved session:', savedSession);
+        console.log('Auth: Checking saved session after delay:', savedSession);
         
-        if (savedSession) {
-          console.log('Auth: Found saved session, determining redirect');
+        if (savedSession?.selectedPublishers?.length > 0) {
+          console.log('Auth: Found saved session with publishers, redirecting to write-article');
           
-          // Determine where to redirect based on saved session
-          if (savedSession.currentRoute === '/write-article' && savedSession.selectedPublishers?.length > 0) {
-            console.log('Auth: Redirecting to write-article with saved session');
-            
-            toast({
-              title: "Welcome back!",
-              description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
-            });
-            
-            navigate('/write-article', { 
-              state: { 
-                selectedPublishers: savedSession.selectedPublishers,
-                fromAuth: true 
-              },
-              replace: true 
-            });
-            return;
-          } else if (savedSession.currentRoute === '/select-publisher' && savedSession.selectedPublishers?.length > 0) {
-            console.log('Auth: Redirecting to select-publisher with saved session');
-            
-            toast({
-              title: "Welcome back!",
-              description: `Continuing with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
-            });
-            
-            navigate('/select-publisher', { replace: true });
-            return;
-          } else if (savedSession.selectedPublishers?.length > 0) {
-            console.log('Auth: Has selected publishers, redirecting to write-article');
-            
-            toast({
-              title: "Welcome back!",
-              description: `Continuing with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
-            });
-            
-            navigate('/write-article', { 
-              state: { 
-                selectedPublishers: savedSession.selectedPublishers,
-                fromAuth: true 
-              },
-              replace: true 
-            });
-            return;
-          }
+          toast({
+            title: "Welcome back!",
+            description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
+          });
+          
+          // Always redirect to write-article if we have selected publishers
+          navigate('/write-article', { 
+            state: { 
+              selectedPublishers: savedSession.selectedPublishers,
+              formData: savedSession.formData,
+              fromAuth: true 
+            },
+            replace: true 
+          });
+          return;
         }
         
-        // No valid saved session, redirect to dashboard
-        console.log('Auth: No saved session, redirecting to dashboard');
+        // No saved session with publishers, redirect to select publishers or dashboard
+        console.log('Auth: No saved session with publishers, redirecting to select-publisher');
         toast({
-          title: "Welcome back!",
-          description: "You're now signed in to your account.",
+          title: "Welcome!",
+          description: "Please select publishers to get started.",
         });
-        navigate('/dashboard', { replace: true });
-      }, 200);
+        navigate('/select-publisher', { replace: true });
+      }, 500); // Increased delay to ensure stability
     }
   }, [user, session, authLoading, navigate, redirectAttempted, toast]);
 
