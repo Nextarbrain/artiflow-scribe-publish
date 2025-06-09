@@ -48,6 +48,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_credentials: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          password_hash: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          password_hash: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       admin_roles: {
         Row: {
           created_at: string
@@ -74,6 +110,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          session_token: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          session_token: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_sessions_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_credentials"
+            referencedColumns: ["admin_id"]
+          },
+        ]
       }
       admin_user_roles: {
         Row: {
@@ -286,6 +357,13 @@ export type Database = {
             referencedRelation: "publishers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "articles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       content_generation_queue: {
@@ -436,6 +514,13 @@ export type Database = {
             columns: ["publisher_id"]
             isOneToOne: false
             referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -631,6 +716,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      authenticate_admin: {
+        Args: { _admin_id: string; _password: string }
+        Returns: {
+          admin_id: string
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          password_hash: string
+          updated_at: string | null
+        }[]
+      }
+      create_admin_session: {
+        Args: { _admin_id: string }
+        Returns: string
+      }
       has_admin_role: {
         Args: { _user_id: string; _role_name: string }
         Returns: boolean
@@ -651,6 +754,14 @@ export type Database = {
           _new_values?: Json
         }
         Returns: undefined
+      }
+      update_admin_login: {
+        Args: { _admin_id: string }
+        Returns: undefined
+      }
+      validate_admin_session: {
+        Args: { _session_token: string }
+        Returns: string
       }
     }
     Enums: {

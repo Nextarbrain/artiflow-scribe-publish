@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,50 +16,63 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
   
-  const { signIn, signUp, signInWithGoogle, user, session } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, session, loading: authLoading } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && session?.access_token) {
+    // Only attempt redirect if we have a user with a valid session and haven't already attempted
+    if (user && session?.access_token && !authLoading && !redirectAttempted) {
       console.log('Auth: User authenticated with valid session');
       console.log('Auth: Session access token exists:', !!session.access_token);
       console.log('Auth: User ID:', user.id);
       
-      // Check for saved publishers immediately - no delay needed
-      const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('Auth: Checking localStorage for selectedPublishers:', savedPublishers);
+      setRedirectAttempted(true);
       
-      if (savedPublishers) {
-        try {
-          const parsedPublishers = JSON.parse(savedPublishers);
-          console.log('Auth: Parsed publishers from localStorage:', parsedPublishers);
-          
-          if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-            console.log('Auth: Found valid publishers, navigating to write-article');
-            // Clear the saved publishers since we're using them
+      // Small delay to ensure DOM is ready and prevent rapid redirects
+      setTimeout(() => {
+        const savedPublishers = localStorage.getItem('selectedPublishers');
+        console.log('Auth: Checking localStorage for selectedPublishers:', savedPublishers);
+        
+        if (savedPublishers) {
+          try {
+            const parsedPublishers = JSON.parse(savedPublishers);
+            console.log('Auth: Parsed publishers from localStorage:', parsedPublishers);
+            
+            if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
+              console.log('Auth: Found valid publishers, navigating to write-article');
+              // Clear the saved publishers since we're using them
+              localStorage.removeItem('selectedPublishers');
+              navigate('/write-article', { 
+                state: { 
+                  selectedPublishers: parsedPublishers,
+                  fromAuth: true 
+                },
+                replace: true 
+              });
+              return;
+            }
+          } catch (error) {
+            console.error('Auth: Error parsing saved publishers:', error);
             localStorage.removeItem('selectedPublishers');
-            navigate('/write-article', { 
-              state: { 
-                selectedPublishers: parsedPublishers,
-                fromAuth: true 
-              },
-              replace: true 
-            });
-            return;
           }
-        } catch (error) {
-          console.error('Auth: Error parsing saved publishers:', error);
-          localStorage.removeItem('selectedPublishers');
         }
-      }
-      
-      console.log('Auth: No saved publishers found, navigating to dashboard');
-      navigate('/dashboard', { replace: true });
+        
+        console.log('Auth: No saved publishers found, navigating to dashboard');
+        navigate('/dashboard', { replace: true });
+      }, 100);
     }
-  }, [user, session, navigate]);
+  }, [user, session, authLoading, navigate, redirectAttempted]);
+
+  // Reset redirect attempt when user changes (e.g., logout)
+  useEffect(() => {
+    if (!user) {
+      setRedirectAttempted(false);
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,8 +81,10 @@ const Auth = () => {
     try {
       let result;
       if (isLogin) {
+        console.log('Auth: Attempting email/password login');
         result = await signIn(email, password);
       } else {
+        console.log('Auth: Attempting email/password signup');
         result = await signUp(email, password, fullName);
       }
 
@@ -98,6 +114,7 @@ const Auth = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('Auth: Google sign in button clicked');
     setLoading(true);
     try {
       const { error } = await signInWithGoogle();
@@ -108,6 +125,14 @@ const Auth = () => {
           description: error.message || "Failed to sign in with Google",
           variant: "destructive",
         });
+        setLoading(false);
+      } else {
+        console.log('Auth: Google sign in initiated successfully');
+        // Don't set loading to false here as user will be redirected
+        toast({
+          title: "Redirecting",
+          description: "Redirecting to Google for authentication...",
+        });
       }
     } catch (error) {
       console.error('Unexpected Google sign in error:', error);
@@ -116,10 +141,21 @@ const Auth = () => {
         description: "Failed to sign in with Google",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
+
+  // Show loading spinner if auth is still loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
@@ -238,7 +274,7 @@ const Auth = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Continue with Google
+              {loading ? 'Redirecting...' : 'Continue with Google'}
             </Button>
           </div>
 
