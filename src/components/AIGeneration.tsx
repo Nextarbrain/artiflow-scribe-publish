@@ -16,7 +16,7 @@ interface AIGenerationProps {
 }
 
 const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initialTopic = '' }) => {
-  const { generateArticle, generateFromImage, isGenerating } = useAIGeneration();
+  const { generateArticle, isGenerating } = useAIGeneration();
   const [topic, setTopic] = useState(initialTopic);
   const [imageDescription, setImageDescription] = useState('');
   const [provider, setProvider] = useState<string>('');
@@ -26,9 +26,10 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
     if (!topic.trim() && generationMode === 'topic') return;
     if (!imageDescription.trim() && generationMode === 'image') return;
 
-    const result = generationMode === 'topic' 
-      ? await generateArticle(topic, provider || undefined)
-      : await generateFromImage(imageDescription, provider || undefined);
+    const prompt = generationMode === 'topic' ? topic : imageDescription;
+    const options = provider ? { provider } : undefined;
+    
+    const result = await generateArticle(prompt, options);
 
     if (result) {
       // Extract title from content (assuming it's the first line)
