@@ -24,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let sessionInitialized = false;
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -32,14 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!mounted) return;
 
         console.log('AuthContext: Auth state changed:', event, session?.user?.email);
-        console.log('AuthContext: Session has access token:', !!session?.access_token);
-        console.log('AuthContext: Event type:', event);
-        
-        // Handle different auth events
-        if (event === 'INITIAL_SESSION') {
-          sessionInitialized = true;
-          console.log('AuthContext: Initial session loaded');
-        }
         
         if (session?.user && session?.access_token) {
           console.log('AuthContext: Setting valid session and user');
@@ -47,74 +38,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           
           // Create/update profile for new signups or signins
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            console.log('AuthContext: User signed in, creating/updating profile');
-            // Small delay to ensure session is fully established
-            setTimeout(async () => {
-              try {
-                const { error: profileError } = await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: session.user.id,
-                    email: session.user.email,
-                    full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
-                    avatar_url: session.user.user_metadata?.avatar_url
-                  }, { 
-                    onConflict: 'id',
-                    ignoreDuplicates: false 
-                  });
-
-                if (profileError) {
-                  console.error('AuthContext: Error creating/updating profile:', profileError);
-                } else {
-                  console.log('AuthContext: Profile created/updated successfully');
-                }
-              } catch (error) {
-                console.error('AuthContext: Error handling profile creation:', error);
-              }
-            }, 100);
-          }
-
-          // Handle post-login redirect for Google OAuth
           if (event === 'SIGNED_IN') {
-            console.log('AuthContext: User signed in, checking for redirect logic');
-            
-            // Check if user has saved session data
-            const savedSession = getUserSession();
-            console.log('AuthContext: Saved session found:', savedSession);
-            
-            if (savedSession?.selectedPublishers?.length > 0) {
-              console.log('AuthContext: Found saved publishers, will redirect to write-article');
-              
-              // Update the saved session to reflect current auth state
-              saveUserSession({
-                ...savedSession,
-                currentRoute: '/write-article'
-              });
-              
-              // Use a short delay to ensure the current component's useEffect can handle the redirect
-              setTimeout(() => {
-                if (window.location.pathname === '/auth' || window.location.pathname === '/') {
-                  console.log('AuthContext: Redirecting to write-article from', window.location.pathname);
-                  window.location.href = '/write-article';
-                }
-              }, 500);
-            } else if (savedSession?.fromHomepage || 
-                      window.location.search.includes('from=homepage') ||
-                      document.referrer.includes('/')) {
-              console.log('AuthContext: User came from homepage, will redirect to select-publisher');
-              
-              saveUserSession({
-                currentRoute: '/select-publisher',
-                fromHomepage: true
-              });
-              
-              setTimeout(() => {
-                if (window.location.pathname === '/auth' || window.location.pathname === '/') {
-                  console.log('AuthContext: Redirecting to select-publisher from', window.location.pathname);
-                  window.location.href = '/select-publisher';
-                }
-              }, 500);
+            console.log('AuthContext: User signed in, creating/updating profile');
+            try {
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .upsert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
+                  avatar_url: session.user.user_metadata?.avatar_url
+                }, { 
+                  onConflict: 'id',
+                  ignoreDuplicates: false 
+                });
+
+              if (profileError) {
+                console.error('AuthContext: Error creating/updating profile:', profileError);
+              } else {
+                console.log('AuthContext: Profile created/updated successfully');
+              }
+            } catch (error) {
+              console.error('AuthContext: Error handling profile creation:', error);
             }
           }
         } else if (event === 'SIGNED_OUT') {
@@ -127,11 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
         
-        // Only set loading to false after initial session check is complete
-        if (event === 'INITIAL_SESSION' || sessionInitialized) {
-          console.log('AuthContext: Setting loading to false');
-          setLoading(false);
-        }
+        // Set loading to false after processing auth state
+        setLoading(false);
       }
     );
 
@@ -142,9 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('AuthContext: Error getting initial session:', error);
-          if (mounted) {
-            setLoading(false);
-          }
+          if (mounted) setLoading(false);
           return;
         }
         
@@ -158,22 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(null);
             setUser(null);
           }
-          
-          // Ensure loading is set to false if we haven't received the INITIAL_SESSION event
-          if (!sessionInitialized) {
-            setTimeout(() => {
-              if (mounted && !sessionInitialized) {
-                console.log('AuthContext: Timeout - setting loading to false');
-                setLoading(false);
-              }
-            }, 2000);
-          }
+          setLoading(false);
         }
       } catch (error) {
         console.error('AuthContext: Error in getInitialSession:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -248,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       console.log('AuthContext: Attempting Google sign in');
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/auth`;
       
       // Save context about where the user came from before redirect
       const currentPath = window.location.pathname;
@@ -291,7 +220,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Signing out');
       await supabase.auth.signOut();
-      // Clear user session storage
       clearUserSession();
       console.log('AuthContext: Sign out successful');
     } catch (error) {

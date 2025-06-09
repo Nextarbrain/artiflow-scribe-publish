@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,33 +55,18 @@ const Auth = () => {
         return;
       }
       
-      // If user came from homepage, go to select-publisher
-      const cameFromHomepage = location.state?.fromHomepage || 
-                              savedSession?.fromHomepage ||
-                              location.state?.from === '/';
-      
-      if (cameFromHomepage) {
-        console.log('Auth: User came from homepage, redirecting to select-publisher');
-        toast({
-          title: "Welcome!",
-          description: "Let's get you started by selecting publishers.",
-        });
-        navigate('/select-publisher', { 
-          state: { fromHomepage: true },
-          replace: true 
-        });
-        return;
-      }
-      
-      // Default: redirect to select publishers for new users
-      console.log('Auth: No saved session, redirecting to select-publisher');
+      // If user came from homepage or no specific context, go to select-publisher
+      console.log('Auth: Redirecting to select-publisher');
       toast({
         title: "Welcome!",
-        description: "Please select publishers to get started.",
+        description: "Let's get you started by selecting publishers.",
       });
-      navigate('/select-publisher', { replace: true });
+      navigate('/select-publisher', { 
+        state: { fromHomepage: true },
+        replace: true 
+      });
     }
-  }, [user, session, authLoading, navigate, toast, location.state]);
+  }, [user, session, authLoading, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
