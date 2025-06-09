@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserSession, hasUserSession } from '@/utils/sessionStorage';
+import { getUserSession, hasUserSession, saveUserSession } from '@/utils/sessionStorage';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -31,39 +31,42 @@ const Auth = () => {
       console.log('Auth: User authenticated, starting redirect process');
       setRedirectAttempted(true);
       
-      // Add a longer delay to ensure session is fully established
-      setTimeout(() => {
-        const savedSession = getUserSession();
-        console.log('Auth: Checking saved session after delay:', savedSession);
+      // Immediately check for saved session without delay
+      const savedSession = getUserSession();
+      console.log('Auth: Checking saved session:', savedSession);
+      
+      if (savedSession?.selectedPublishers?.length > 0) {
+        console.log('Auth: Found saved session with publishers, redirecting to write-article');
         
-        if (savedSession?.selectedPublishers?.length > 0) {
-          console.log('Auth: Found saved session with publishers, redirecting to write-article');
-          
-          toast({
-            title: "Welcome back!",
-            description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
-          });
-          
-          // Always redirect to write-article if we have selected publishers
-          navigate('/write-article', { 
-            state: { 
-              selectedPublishers: savedSession.selectedPublishers,
-              formData: savedSession.formData,
-              fromAuth: true 
-            },
-            replace: true 
-          });
-          return;
-        }
-        
-        // No saved session with publishers, redirect to select publishers or dashboard
-        console.log('Auth: No saved session with publishers, redirecting to select-publisher');
         toast({
-          title: "Welcome!",
-          description: "Please select publishers to get started.",
+          title: "Welcome back!",
+          description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
         });
-        navigate('/select-publisher', { replace: true });
-      }, 500); // Increased delay to ensure stability
+        
+        // Save current route and navigate immediately
+        saveUserSession({
+          ...savedSession,
+          currentRoute: '/write-article'
+        });
+        
+        navigate('/write-article', { 
+          state: { 
+            selectedPublishers: savedSession.selectedPublishers,
+            formData: savedSession.formData,
+            fromAuth: true 
+          },
+          replace: true 
+        });
+        return;
+      }
+      
+      // No saved session with publishers, redirect to select publishers
+      console.log('Auth: No saved session with publishers, redirecting to select-publisher');
+      toast({
+        title: "Welcome!",
+        description: "Please select publishers to get started.",
+      });
+      navigate('/select-publisher', { replace: true });
     }
   }, [user, session, authLoading, navigate, redirectAttempted, toast]);
 
@@ -100,9 +103,8 @@ const Auth = () => {
           title: "Account Created",
           description: "Please check your email to verify your account before signing in.",
         });
-        setIsLogin(true); // Switch to login mode after successful signup
+        setIsLogin(true);
       }
-      // For successful login, the useEffect will handle the redirect
     } catch (error) {
       console.error('Unexpected auth error:', error);
       toast({
@@ -118,6 +120,13 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     console.log('Auth: Google sign in initiated');
     setLoading(true);
+    
+    // Save current session state before Google redirect
+    const currentSession = getUserSession();
+    if (currentSession) {
+      console.log('Auth: Saving session before Google redirect');
+      saveUserSession(currentSession);
+    }
     
     try {
       const { error } = await signInWithGoogle();

@@ -2,6 +2,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { clearUserSession } from '@/utils/sessionStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -233,8 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Signing out');
       await supabase.auth.signOut();
-      // Clear any saved data
-      localStorage.removeItem('selectedPublishers');
+      // Clear user session storage
+      clearUserSession();
       console.log('AuthContext: Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
