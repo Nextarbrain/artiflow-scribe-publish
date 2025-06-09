@@ -8,7 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserSession, hasUserSession } from '@/utils/sessionStorage';
+import { getUserSession, hasUserSession, clearUserSession } from '@/utils/sessionStorage';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -27,15 +27,15 @@ const Auth = () => {
   useEffect(() => {
     console.log('Auth: useEffect triggered - User:', !!user, 'Session:', !!session, 'Loading:', authLoading);
     
-    // Only handle redirect if we have a valid authenticated user and session
+    // Only redirect if we have a valid authenticated user and session
     if (user && session?.access_token && !authLoading) {
       console.log('Auth: User authenticated, checking for saved session');
       
-      // Check if user has saved session data (this handles both email/password and Google OAuth)
+      // Check for saved session data
       const savedSession = getUserSession();
-      console.log('Auth: Checking saved session:', savedSession);
+      console.log('Auth: Saved session check:', savedSession);
       
-      // If user has saved publishers, redirect to write-article
+      // Handle redirect based on saved session
       if (savedSession?.selectedPublishers?.length > 0) {
         console.log('Auth: Found saved session with publishers, redirecting to write-article');
         
@@ -55,16 +55,23 @@ const Auth = () => {
         return;
       }
       
-      // If user came from homepage or no specific context, go to select-publisher
-      console.log('Auth: Redirecting to select-publisher');
-      toast({
-        title: "Welcome!",
-        description: "Let's get you started by selecting publishers.",
-      });
-      navigate('/select-publisher', { 
-        state: { fromHomepage: true },
-        replace: true 
-      });
+      // If user came from homepage but no publishers selected yet
+      if (savedSession?.fromHomepage) {
+        console.log('Auth: User came from homepage, redirecting to select-publisher');
+        toast({
+          title: "Welcome!",
+          description: "Let's continue by selecting publishers.",
+        });
+        navigate('/select-publisher', { 
+          state: { fromHomepage: true },
+          replace: true 
+        });
+        return;
+      }
+      
+      // Default redirect to dashboard
+      console.log('Auth: Default redirect to dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, session, authLoading, navigate, toast]);
 

@@ -2,7 +2,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { clearUserSession, getUserSession, saveUserSession } from '@/utils/sessionStorage';
+import { saveUserSession, getUserSession } from '@/utils/sessionStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -72,7 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
         
-        // Set loading to false after processing auth state
         setLoading(false);
       }
     );
@@ -152,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       console.log('AuthContext: Attempting sign up');
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/auth`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -178,20 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Attempting Google sign in');
       const redirectUrl = `${window.location.origin}/auth`;
-      
-      // Save context about where the user came from before redirect
-      const currentPath = window.location.pathname;
-      const savedSession = getUserSession();
-      
-      // Preserve the context in session storage
-      if (savedSession?.fromHomepage || currentPath === '/' || savedSession?.selectedPublishers?.length > 0) {
-        console.log('AuthContext: Preserving context for post-Google login redirect');
-        saveUserSession({
-          ...savedSession,
-          fromHomepage: savedSession?.fromHomepage || currentPath === '/',
-          currentRoute: currentPath
-        });
-      }
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -220,7 +205,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Signing out');
       await supabase.auth.signOut();
-      clearUserSession();
       console.log('AuthContext: Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
