@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
-import { Eye, EyeOff, Mail, Lock, User, Zap, Shield } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
@@ -17,7 +17,6 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isAdminLogin, setIsAdminLogin] = useState(false);
   
   const { signIn, signUp, signInWithGoogle, user, session } = useAuth();
   const { signInAdmin, isAuthenticated: isAdminAuthenticated } = useAdminAuth();
@@ -27,7 +26,7 @@ const Auth = () => {
 
   useEffect(() => {
     // Handle regular user authentication
-    if (user && session?.access_token && !isAdminLogin) {
+    if (user && session?.access_token) {
       console.log('Auth: User authenticated with valid session');
       
       const savedPublishers = localStorage.getItem('selectedPublishers');
@@ -61,11 +60,11 @@ const Auth = () => {
     }
 
     // Handle admin authentication
-    if (isAdminAuthenticated && isAdminLogin) {
+    if (isAdminAuthenticated) {
       console.log('Auth: Admin authenticated, navigating to admin dashboard');
       navigate('/admin', { replace: true });
     }
-  }, [user, session, isAdminAuthenticated, navigate, isAdminLogin]);
+  }, [user, session, isAdminAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,32 +73,35 @@ const Auth = () => {
     try {
       let result;
       
-      if (isAdminLogin) {
-        // Admin login - use email as admin_id
+      // First, try admin login if the email looks like an admin ID (doesn't contain @)
+      if (isLogin && !email.includes('@')) {
+        console.log('Auth: Attempting admin login for:', email);
         result = await signInAdmin(email, password);
         if (!result.error) {
           toast({
             title: "Admin Login Successful",
             description: "Welcome to the admin dashboard",
           });
+          setLoading(false);
+          return;
         }
+      }
+      
+      // If admin login failed or email contains @, try regular user auth
+      if (isLogin) {
+        result = await signIn(email, password);
       } else {
-        // Regular user login/signup
-        if (isLogin) {
-          result = await signIn(email, password);
-        } else {
-          result = await signUp(email, password, fullName);
-        }
+        result = await signUp(email, password, fullName);
       }
 
       if (result.error) {
         console.error('Auth error:', result.error);
         toast({
           title: "Authentication Failed",
-          description: result.error.message || "An authentication error occurred",
+          description: result.error.message || "Invalid credentials",
           variant: "destructive",
         });
-      } else if (!isLogin && !isAdminLogin) {
+      } else if (!isLogin) {
         toast({
           title: "Success",
           description: "Please check your email to verify your account.",
@@ -118,15 +120,6 @@ const Auth = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (isAdminLogin) {
-      toast({
-        title: "Not Available",
-        description: "Google sign-in is not available for admin accounts",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const { error } = await signInWithGoogle();
@@ -150,73 +143,33 @@ const Auth = () => {
     }
   };
 
-  const handleModeSwitch = (adminMode: boolean) => {
-    setIsAdminLogin(adminMode);
-    setEmail('');
-    setPassword('');
-    setFullName('');
-    setIsLogin(true); // Reset to login mode when switching
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className={`w-10 h-10 ${isAdminLogin ? 'bg-red-600' : 'bg-blue-600'} rounded-lg flex items-center justify-center`}>
-              {isAdminLogin ? (
-                <Shield className="w-6 h-6 text-white" />
-              ) : (
-                <Zap className="w-6 h-6 text-white" />
-              )}
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              {isAdminLogin ? 'Admin Portal' : 'ArticleAI'}
+              ArticleAI
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {isAdminLogin 
-              ? 'Administrator Access'
-              : (isLogin ? 'Welcome Back' : 'Create Account')
-            }
+            {isLogin ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {isAdminLogin 
-              ? 'Secure login for system administrators'
-              : (isLogin 
-                ? 'Sign in to your account to continue' 
-                : 'Join us and start creating amazing articles'
-              )
+            {isLogin 
+              ? 'Sign in to your account to continue' 
+              : 'Join us and start creating amazing articles'
             }
           </p>
         </div>
 
-        {/* Mode Toggle */}
-        <div className="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <Button
-            type="button"
-            onClick={() => handleModeSwitch(false)}
-            variant={!isAdminLogin ? "default" : "ghost"}
-            className={`flex-1 ${!isAdminLogin ? 'bg-blue-600 text-white' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <User className="w-4 h-4 mr-2" />
-            User Login
-          </Button>
-          <Button
-            type="button"
-            onClick={() => handleModeSwitch(true)}
-            variant={isAdminLogin ? "default" : "ghost"}
-            className={`flex-1 ${isAdminLogin ? 'bg-red-600 text-white' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Admin Login
-          </Button>
-        </div>
-
         <Card className="p-6 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && !isAdminLogin && (
+            {!isLogin && (
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -233,8 +186,8 @@ const Auth = () => {
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                type={isAdminLogin ? "text" : "email"}
-                placeholder={isAdminLogin ? "Admin ID" : "Email"}
+                type="text"
+                placeholder="Email or Admin ID"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
@@ -263,16 +216,14 @@ const Auth = () => {
 
             <Button
               type="submit"
-              className={`w-full ${isAdminLogin ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               disabled={loading}
             >
-              {loading ? 'Please wait...' : (
-                isAdminLogin ? 'Admin Login' : (isLogin ? 'Sign In' : 'Create Account')
-              )}
+              {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
             </Button>
           </form>
 
-          {!isAdminLogin && (
+          {isLogin && (
             <>
               <div className="mt-4">
                 <div className="relative">
@@ -330,15 +281,26 @@ const Auth = () => {
             </>
           )}
 
-          {isAdminLogin && (
-            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Demo Credentials:</h3>
-              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                <div>Admin ID: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">master_admin</code></div>
-                <div>Password: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">AdminPass123!</code></div>
-              </div>
+          {!isLogin && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Already have an account? Sign in
+              </button>
             </div>
           )}
+
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Login Help:</h3>
+            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              <div>• Use your email for regular user login</div>
+              <div>• Use admin ID for admin access: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">master_admin</code></div>
+              <div>• Admin password: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">AdminPass123!</code></div>
+            </div>
+          </div>
 
           <div className="mt-4 text-center">
             <Button

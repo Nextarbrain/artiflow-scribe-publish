@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Zap, User, Shield } from 'lucide-react';
+import { Zap, User } from 'lucide-react';
 import UserMenu from './UserMenu';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun } from 'lucide-react';
@@ -46,24 +46,14 @@ const Header = () => {
             {user ? (
               <UserMenu />
             ) : (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/auth')}
-                  className="text-gray-600 dark:text-gray-400"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Sign In
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/auth')}
-                  className="text-red-600 dark:text-red-400"
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/auth')}
+                className="text-gray-600 dark:text-gray-400"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
             )}
           </div>
         </div>
