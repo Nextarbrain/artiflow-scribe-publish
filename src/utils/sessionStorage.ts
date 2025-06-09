@@ -2,6 +2,7 @@
 export interface UserSession {
   selectedPublishers?: any[];
   currentRoute?: string;
+  fromHomepage?: boolean;
   formData?: {
     title?: string;
     content?: string;
