@@ -24,7 +24,7 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Only attempt redirect if we have a user with a valid session and haven't already attempted
+    // Only attempt redirect if we have a valid authenticated user and haven't already attempted
     if (user && session?.access_token && !authLoading && !redirectAttempted) {
       console.log('Auth: User authenticated with valid session');
       console.log('Auth: Session access token exists:', !!session.access_token);
@@ -32,20 +32,27 @@ const Auth = () => {
       
       setRedirectAttempted(true);
       
-      // Small delay to ensure DOM is ready and prevent rapid redirects
+      // Small delay to ensure session is fully established
       setTimeout(() => {
+        // Check for saved publishers from SelectPublisher page
         const savedPublishers = localStorage.getItem('selectedPublishers');
-        console.log('Auth: Checking localStorage for selectedPublishers:', savedPublishers);
+        console.log('Auth: Checking for selectedPublishers in localStorage:', savedPublishers);
         
         if (savedPublishers) {
           try {
             const parsedPublishers = JSON.parse(savedPublishers);
-            console.log('Auth: Parsed publishers from localStorage:', parsedPublishers);
+            console.log('Auth: Found saved publishers:', parsedPublishers);
             
             if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-              console.log('Auth: Found valid publishers, navigating to write-article');
-              // Clear the saved publishers since we're using them
-              localStorage.removeItem('selectedPublishers');
+              console.log('Auth: Valid publishers found, redirecting to write-article');
+              
+              // Show success toast
+              toast({
+                title: "Welcome back!",
+                description: `Continuing with ${parsedPublishers.length} selected publisher${parsedPublishers.length > 1 ? 's' : ''}`,
+              });
+              
+              // Navigate to write-article with the selected publishers
               navigate('/write-article', { 
                 state: { 
                   selectedPublishers: parsedPublishers,
@@ -53,7 +60,13 @@ const Auth = () => {
                 },
                 replace: true 
               });
+              
+              // Clear localStorage after successful navigation
+              localStorage.removeItem('selectedPublishers');
               return;
+            } else {
+              console.log('Auth: Invalid publishers array, cleaning up localStorage');
+              localStorage.removeItem('selectedPublishers');
             }
           } catch (error) {
             console.error('Auth: Error parsing saved publishers:', error);
@@ -61,11 +74,16 @@ const Auth = () => {
           }
         }
         
-        console.log('Auth: No saved publishers found, navigating to dashboard');
+        // No valid saved publishers, redirect to dashboard
+        console.log('Auth: No saved publishers, redirecting to dashboard');
+        toast({
+          title: "Welcome back!",
+          description: "You're now signed in to your account.",
+        });
         navigate('/dashboard', { replace: true });
-      }, 100);
+      }, 200);
     }
-  }, [user, session, authLoading, navigate, redirectAttempted]);
+  }, [user, session, authLoading, navigate, redirectAttempted, toast]);
 
   // Reset redirect attempt when user changes (e.g., logout)
   useEffect(() => {
@@ -91,21 +109,23 @@ const Auth = () => {
       if (result.error) {
         console.error('Auth error:', result.error);
         toast({
-          title: "Error",
-          description: result.error.message || "An authentication error occurred",
+          title: "Authentication Error",
+          description: result.error.message || "An authentication error occurred. Please try again.",
           variant: "destructive",
         });
       } else if (!isLogin) {
         toast({
-          title: "Success",
-          description: "Please check your email to verify your account.",
+          title: "Account Created",
+          description: "Please check your email to verify your account before signing in.",
         });
+        setIsLogin(true); // Switch to login mode after successful signup
       }
+      // For successful login, the useEffect will handle the redirect
     } catch (error) {
       console.error('Unexpected auth error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -114,48 +134,52 @@ const Auth = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    console.log('Auth: Google sign in button clicked');
+    console.log('Auth: Google sign in initiated');
     setLoading(true);
+    
     try {
       const { error } = await signInWithGoogle();
       if (error) {
         console.error('Google sign in error:', error);
         toast({
-          title: "Error",
-          description: error.message || "Failed to sign in with Google",
+          title: "Google Sign In Error",
+          description: error.message || "Failed to sign in with Google. Please try again.",
           variant: "destructive",
         });
         setLoading(false);
       } else {
-        console.log('Auth: Google sign in initiated successfully');
-        // Don't set loading to false here as user will be redirected
+        console.log('Auth: Google OAuth redirect initiated');
         toast({
-          title: "Redirecting",
-          description: "Redirecting to Google for authentication...",
+          title: "Redirecting...",
+          description: "Redirecting to Google for authentication",
         });
+        // Don't set loading to false - user will be redirected
       }
     } catch (error) {
       console.error('Unexpected Google sign in error:', error);
       toast({
         title: "Error",
-        description: "Failed to sign in with Google",
+        description: "Failed to initiate Google sign in. Please try again.",
         variant: "destructive",
       });
       setLoading(false);
     }
   };
 
-  // Show loading spinner if auth is still loading
+  // Show loading spinner while auth is loading
   if (authLoading) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading your session...</p>
         </div>
       </div>
     );
   }
+
+  // Check if user came from publisher selection
+  const hasSelectedPublishers = localStorage.getItem('selectedPublishers');
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
@@ -171,12 +195,18 @@ const Auth = () => {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {hasSelectedPublishers 
+              ? (isLogin ? 'Sign in to Continue' : 'Create Account to Continue')
+              : (isLogin ? 'Welcome Back' : 'Create Account')
+            }
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {isLogin 
-              ? 'Sign in to your account to continue' 
-              : 'Join us and start creating amazing articles'
+            {hasSelectedPublishers 
+              ? 'Sign in to proceed with your selected publishers'
+              : (isLogin 
+                  ? 'Sign in to your account to continue' 
+                  : 'Join us and start creating amazing articles'
+                )
             }
           </p>
         </div>
@@ -283,6 +313,7 @@ const Auth = () => {
               type="button"
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+              disabled={loading}
             >
               {isLogin 
                 ? "Don't have an account? Sign up" 

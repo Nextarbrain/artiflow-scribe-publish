@@ -38,19 +38,32 @@ const SelectPublisher = () => {
 
     if (!user) {
       // Store selected publishers in localStorage for after login
-      console.log('SelectPublisher: Saving publishers to localStorage:', selectedPublishers);
+      console.log('SelectPublisher: User not logged in, saving publishers to localStorage:', selectedPublishers);
       localStorage.setItem('selectedPublishers', JSON.stringify(selectedPublishers));
+      
       toast({
         title: "Login Required",
-        description: "Please login to continue with article creation.",
+        description: `Please sign in to continue with your ${selectedPublishers.length} selected publisher${selectedPublishers.length > 1 ? 's' : ''}.`,
       });
+      
+      // Navigate to auth page
       navigate('/auth');
       return;
     }
 
-    // User is logged in, proceed to article creation
-    console.log('SelectPublisher: User logged in, navigating to write-article with state');
-    navigate('/write-article', { state: { selectedPublishers } });
+    // User is logged in, proceed directly to article creation
+    console.log('SelectPublisher: User logged in, navigating to write-article');
+    toast({
+      title: "Ready to Write!",
+      description: `Proceeding with ${selectedPublishers.length} selected publisher${selectedPublishers.length > 1 ? 's' : ''}.`,
+    });
+    
+    navigate('/write-article', { 
+      state: { 
+        selectedPublishers,
+        fromSelection: true 
+      } 
+    });
   };
 
   if (isLoading) {

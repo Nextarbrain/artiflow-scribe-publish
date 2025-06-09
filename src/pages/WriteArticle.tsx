@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,9 +34,9 @@ const WriteArticle = () => {
   const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
   useEffect(() => {
-    console.log('WriteArticle: useEffect triggered');
-    console.log('WriteArticle: user:', !!user);
-    console.log('WriteArticle: location.state:', location.state);
+    console.log('WriteArticle: Component mounted');
+    console.log('WriteArticle: User authenticated:', !!user);
+    console.log('WriteArticle: Location state:', location.state);
     
     if (!user) {
       console.log('WriteArticle: No user, redirecting to auth');
@@ -43,11 +44,10 @@ const WriteArticle = () => {
       return;
     }
 
-    // Function to restore publishers from different sources
     const restorePublishers = () => {
       console.log('WriteArticle: Starting publisher restoration');
       
-      // First try: location state (from Auth.tsx navigation or direct navigation)
+      // Priority 1: Publishers from navigation state (preferred method)
       if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
         const statePublishers = location.state.selectedPublishers;
         console.log('WriteArticle: Found publishers in navigation state:', statePublishers.length);
@@ -56,19 +56,26 @@ const WriteArticle = () => {
           console.log('WriteArticle: Using publishers from navigation state');
           setSelectedPublishers(statePublishers);
           setIsLoading(false);
+          
+          // Show welcome message based on source
+          if (location.state.fromAuth) {
+            toast({
+              title: "Welcome back!",
+              description: `Ready to write for ${statePublishers.length} publisher${statePublishers.length > 1 ? 's' : ''}`,
+            });
+          }
           return true;
         }
       }
 
-      // Second try: localStorage (fallback for edge cases)
+      // Priority 2: Check localStorage as fallback
       console.log('WriteArticle: Checking localStorage for publishers');
       const savedPublishers = localStorage.getItem('selectedPublishers');
-      console.log('WriteArticle: localStorage value:', savedPublishers);
       
       if (savedPublishers) {
         try {
           const parsedPublishers = JSON.parse(savedPublishers);
-          console.log('WriteArticle: Parsed localStorage publishers:', parsedPublishers);
+          console.log('WriteArticle: Found publishers in localStorage:', parsedPublishers.length);
           
           if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
             console.log('WriteArticle: Using publishers from localStorage');
@@ -77,7 +84,12 @@ const WriteArticle = () => {
             
             // Clean up localStorage after successful use
             localStorage.removeItem('selectedPublishers');
-            console.log('WriteArticle: Cleaned localStorage after successful restoration');
+            console.log('WriteArticle: Cleaned localStorage after restoration');
+            
+            toast({
+              title: "Publishers Restored",
+              description: `Ready to write for ${parsedPublishers.length} publisher${parsedPublishers.length > 1 ? 's' : ''}`,
+            });
             return true;
           }
         } catch (error) {
@@ -86,15 +98,20 @@ const WriteArticle = () => {
         }
       }
 
-      // No publishers found anywhere
+      // No publishers found - redirect to selection
       console.log('WriteArticle: No publishers found, redirecting to select-publisher');
+      toast({
+        title: "No Publishers Selected",
+        description: "Please select publishers to write for.",
+        variant: "destructive",
+      });
       navigate('/select-publisher');
       return false;
     };
 
     // Restore publishers
     restorePublishers();
-  }, [user, location.state, navigate]);
+  }, [user, location.state, navigate, toast]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
     if (!user || selectedPublishers.length === 0) return null;
@@ -153,7 +170,7 @@ const WriteArticle = () => {
       }
 
       toast({
-        title: "Article saved",
+        title: "Article Saved",
         description: "Your article has been saved as a draft.",
       });
 
@@ -161,7 +178,7 @@ const WriteArticle = () => {
     } catch (error) {
       console.error('Error saving article:', error);
       toast({
-        title: "Error",
+        title: "Save Failed",
         description: "Failed to save article. Please try again.",
         variant: "destructive",
       });
@@ -174,7 +191,7 @@ const WriteArticle = () => {
   const handlePreview = async () => {
     if (!title.trim() || !content.trim()) {
       toast({
-        title: "Missing content",
+        title: "Missing Content",
         description: "Please add a title and content before previewing.",
         variant: "destructive",
       });
@@ -191,14 +208,15 @@ const WriteArticle = () => {
     await saveArticle('writing');
   };
 
-  // Show loading state while checking for publishers
+  // Show loading state while restoring publishers
   if (isLoading) {
     return (
       <>
         <Header />
         <div className="container max-w-4xl py-8">
           <div className="text-center">
-            <p>Loading your article setup...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Setting up your article...</p>
           </div>
         </div>
       </>
@@ -253,7 +271,7 @@ const WriteArticle = () => {
           <CardHeader>
             <CardTitle>Write Your Article</CardTitle>
             <CardDescription>
-              Create your article content. Everything is automatically saved as you type.
+              Create engaging content for your selected publishers.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
