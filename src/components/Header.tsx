@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, LogIn, Zap, BookOpen, Plus, Crown } from 'lucide-react';
+import { Moon, Sun, LogIn, Zap, BookOpen, Plus, Crown, Shield } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -68,6 +68,14 @@ const Header = () => {
                 Admin
               </Button>
             )}
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/admin/login')}
+              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Admin Portal
+            </Button>
           </nav>
 
           {/* Actions */}
