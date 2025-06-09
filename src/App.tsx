@@ -4,73 +4,50 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
-import Header from "@/components/Header";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./components/ThemeProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import CreateArticle from "./pages/CreateArticle";
-import WriteArticle from "./pages/WriteArticle";
-import SelectPublisher from "./pages/SelectPublisher";
-import Payment from "./pages/Payment";
-import PreviewArticle from "./pages/PreviewArticle";
 import Articles from "./pages/Articles";
-import Profile from "./pages/Profile";
+import CreateArticle from "./pages/CreateArticle";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
+import SelectPublisher from "./pages/SelectPublisher";
+import WriteArticle from "./pages/WriteArticle";
+import PreviewArticle from "./pages/PreviewArticle";
+import Payment from "./pages/Payment";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
+    <TooltipProvider>
+      <ThemeProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AdminAuthProvider>
-              <Routes>
-                {/* Unified Auth Route */}
-                <Route path="/auth" element={<Auth />} />
-                
-                {/* Admin Routes */}
-                <Route 
-                  path="/admin/*" 
-                  element={
-                    <AdminProtectedRoute>
-                      <AdminDashboard />
-                    </AdminProtectedRoute>
-                  } 
-                />
-                
-                {/* Main App Routes */}
-                <Route path="/*" element={
-                  <>
-                    <Header />
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/create-article" element={<CreateArticle />} />
-                      <Route path="/write-article" element={<WriteArticle />} />
-                      <Route path="/select-publisher" element={<SelectPublisher />} />
-                      <Route path="/payment" element={<Payment />} />
-                      <Route path="/preview-article" element={<PreviewArticle />} />
-                      <Route path="/articles" element={<Articles />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </>
-                } />
-              </Routes>
-            </AdminAuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/articles" element={<Articles />} />
+              <Route path="/create-article" element={<CreateArticle />} />
+              <Route path="/select-publisher" element={<SelectPublisher />} />
+              <Route path="/write-article" element={<WriteArticle />} />
+              <Route path="/preview-article" element={<PreviewArticle />} />
+              <Route path="/payment" element={<Payment />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

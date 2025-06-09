@@ -16,20 +16,19 @@ interface AIGenerationProps {
 }
 
 const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initialTopic = '' }) => {
-  const { generateArticle, isGenerating } = useAIGeneration();
+  const { generateArticle, generateFromImage, isGenerating } = useAIGeneration();
   const [topic, setTopic] = useState(initialTopic);
   const [imageDescription, setImageDescription] = useState('');
-  const [provider, setProvider] = useState<string>('default');
+  const [provider, setProvider] = useState<string>('');
   const [generationMode, setGenerationMode] = useState<'topic' | 'image'>('topic');
 
   const handleGenerate = async () => {
     if (!topic.trim() && generationMode === 'topic') return;
     if (!imageDescription.trim() && generationMode === 'image') return;
 
-    const prompt = generationMode === 'topic' ? topic : imageDescription;
-    const options = provider && provider !== 'default' ? { provider } : undefined;
-    
-    const result = await generateArticle(prompt, options);
+    const result = generationMode === 'topic' 
+      ? await generateArticle(topic, provider || undefined)
+      : await generateFromImage(imageDescription, provider || undefined);
 
     if (result) {
       // Extract title from content (assuming it's the first line)
@@ -123,7 +122,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
               <SelectValue placeholder="Use default provider" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="default">Default Provider</SelectItem>
+              <SelectItem value="">Default Provider</SelectItem>
               <SelectItem value="openai">
                 <div className="flex items-center gap-2">
                   {providerIcons.openai}
@@ -147,7 +146,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
         </div>
 
         {/* Selected Provider Badge */}
-        {provider && provider !== 'default' && (
+        {provider && (
           <div>
             <Badge className={providerColors[provider as keyof typeof providerColors]}>
               {providerIcons[provider as keyof typeof providerIcons]}
