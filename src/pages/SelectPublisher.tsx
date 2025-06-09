@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePublishers, Publisher } from '@/hooks/usePublishers';
@@ -10,6 +10,7 @@ import PublisherSelectionHeader from '@/components/PublisherSelectionHeader';
 import PublisherGrid from '@/components/PublisherGrid';
 import LoginPrompt from '@/components/LoginPrompt';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { saveUserSession, getUserSession } from '@/utils/sessionStorage';
 
 const SelectPublisher = () => {
   const navigate = useNavigate();
@@ -18,12 +19,31 @@ const SelectPublisher = () => {
   const { toast } = useToast();
   const [selectedPublishers, setSelectedPublishers] = useState<Publisher[]>([]);
 
-  const handlePublisherToggle = (publisher: Publisher, checked: boolean) => {
-    if (checked) {
-      setSelectedPublishers(prev => [...prev, publisher]);
-    } else {
-      setSelectedPublishers(prev => prev.filter(p => p.id !== publisher.id));
+  // Restore selected publishers on component mount
+  useEffect(() => {
+    const savedSession = getUserSession();
+    if (savedSession?.selectedPublishers) {
+      console.log('SelectPublisher: Restoring selected publishers from session');
+      setSelectedPublishers(savedSession.selectedPublishers);
     }
+  }, []);
+
+  const handlePublisherToggle = (publisher: Publisher, checked: boolean) => {
+    let updatedPublishers: Publisher[];
+    
+    if (checked) {
+      updatedPublishers = [...selectedPublishers, publisher];
+    } else {
+      updatedPublishers = selectedPublishers.filter(p => p.id !== publisher.id);
+    }
+    
+    setSelectedPublishers(updatedPublishers);
+    
+    // Save to session storage
+    saveUserSession({
+      selectedPublishers: updatedPublishers,
+      currentRoute: '/select-publisher'
+    });
   };
 
   const handleContinue = () => {
@@ -37,16 +57,18 @@ const SelectPublisher = () => {
     }
 
     if (!user) {
-      // Store selected publishers in localStorage for after login
-      console.log('SelectPublisher: User not logged in, saving publishers to localStorage:', selectedPublishers);
-      localStorage.setItem('selectedPublishers', JSON.stringify(selectedPublishers));
+      // Save complete session before redirecting to auth
+      console.log('SelectPublisher: User not logged in, saving complete session');
+      saveUserSession({
+        selectedPublishers,
+        currentRoute: '/select-publisher'
+      });
       
       toast({
         title: "Login Required",
         description: `Please sign in to continue with your ${selectedPublishers.length} selected publisher${selectedPublishers.length > 1 ? 's' : ''}.`,
       });
       
-      // Navigate to auth page
       navigate('/auth');
       return;
     }

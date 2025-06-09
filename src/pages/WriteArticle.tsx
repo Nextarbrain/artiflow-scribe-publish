@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Save, Eye, ArrowLeft, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { saveUserSession, getUserSession, clearUserSession } from '@/utils/sessionStorage';
 
 const WriteArticle = () => {
   const navigate = useNavigate();
@@ -33,6 +34,23 @@ const WriteArticle = () => {
   const totalAmount = selectedPublishers.reduce((sum, publisher) => sum + publisher.price_per_article, 0);
   const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
+  // Save form data to session storage whenever it changes
+  useEffect(() => {
+    if (user && selectedPublishers.length > 0) {
+      saveUserSession({
+        selectedPublishers,
+        currentRoute: '/write-article',
+        formData: {
+          title,
+          content,
+          excerpt,
+          metaDescription,
+          tags
+        }
+      });
+    }
+  }, [user, selectedPublishers, title, content, excerpt, metaDescription, tags]);
+
   useEffect(() => {
     console.log('WriteArticle: Component mounted');
     console.log('WriteArticle: User authenticated:', !!user);
@@ -44,8 +62,8 @@ const WriteArticle = () => {
       return;
     }
 
-    const restorePublishers = () => {
-      console.log('WriteArticle: Starting publisher restoration');
+    const restoreSession = () => {
+      console.log('WriteArticle: Starting session restoration');
       
       // Priority 1: Publishers from navigation state (preferred method)
       if (location.state?.selectedPublishers && Array.isArray(location.state.selectedPublishers)) {
@@ -55,51 +73,63 @@ const WriteArticle = () => {
         if (statePublishers.length > 0) {
           console.log('WriteArticle: Using publishers from navigation state');
           setSelectedPublishers(statePublishers);
+          
+          // Restore form data from session if available
+          const savedSession = getUserSession();
+          if (savedSession?.formData) {
+            console.log('WriteArticle: Restoring form data from session');
+            setTitle(savedSession.formData.title || '');
+            setContent(savedSession.formData.content || '');
+            setExcerpt(savedSession.formData.excerpt || '');
+            setMetaDescription(savedSession.formData.metaDescription || '');
+            setTags(savedSession.formData.tags || '');
+          }
+          
           setIsLoading(false);
           
           // Show welcome message based on source
           if (location.state.fromAuth) {
             toast({
               title: "Welcome back!",
-              description: `Ready to write for ${statePublishers.length} publisher${statePublishers.length > 1 ? 's' : ''}`,
+              description: `Continuing where you left off with ${statePublishers.length} publisher${statePublishers.length > 1 ? 's' : ''}`,
             });
           }
           return true;
         }
       }
 
-      // Priority 2: Check localStorage as fallback
-      console.log('WriteArticle: Checking localStorage for publishers');
-      const savedPublishers = localStorage.getItem('selectedPublishers');
+      // Priority 2: Check session storage as fallback
+      console.log('WriteArticle: Checking session storage for complete session');
+      const savedSession = getUserSession();
       
-      if (savedPublishers) {
-        try {
-          const parsedPublishers = JSON.parse(savedPublishers);
-          console.log('WriteArticle: Found publishers in localStorage:', parsedPublishers.length);
+      if (savedSession?.selectedPublishers) {
+        console.log('WriteArticle: Found complete session:', savedSession);
+        
+        if (Array.isArray(savedSession.selectedPublishers) && savedSession.selectedPublishers.length > 0) {
+          console.log('WriteArticle: Restoring complete session');
+          setSelectedPublishers(savedSession.selectedPublishers);
           
-          if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-            console.log('WriteArticle: Using publishers from localStorage');
-            setSelectedPublishers(parsedPublishers);
-            setIsLoading(false);
-            
-            // Clean up localStorage after successful use
-            localStorage.removeItem('selectedPublishers');
-            console.log('WriteArticle: Cleaned localStorage after restoration');
-            
-            toast({
-              title: "Publishers Restored",
-              description: `Ready to write for ${parsedPublishers.length} publisher${parsedPublishers.length > 1 ? 's' : ''}`,
-            });
-            return true;
+          // Restore form data
+          if (savedSession.formData) {
+            setTitle(savedSession.formData.title || '');
+            setContent(savedSession.formData.content || '');
+            setExcerpt(savedSession.formData.excerpt || '');
+            setMetaDescription(savedSession.formData.metaDescription || '');
+            setTags(savedSession.formData.tags || '');
           }
-        } catch (error) {
-          console.error('WriteArticle: Error parsing localStorage publishers:', error);
-          localStorage.removeItem('selectedPublishers');
+          
+          setIsLoading(false);
+          
+          toast({
+            title: "Session Restored",
+            description: `Continuing where you left off with ${savedSession.selectedPublishers.length} publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
+          });
+          return true;
         }
       }
 
-      // No publishers found - redirect to selection
-      console.log('WriteArticle: No publishers found, redirecting to select-publisher');
+      // No session found - redirect to selection
+      console.log('WriteArticle: No session found, redirecting to select-publisher');
       toast({
         title: "No Publishers Selected",
         description: "Please select publishers to write for.",
@@ -109,8 +139,8 @@ const WriteArticle = () => {
       return false;
     };
 
-    // Restore publishers
-    restorePublishers();
+    // Restore session
+    restoreSession();
   }, [user, location.state, navigate, toast]);
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
@@ -200,6 +230,8 @@ const WriteArticle = () => {
 
     const articleId = await saveArticle('preview');
     if (articleId) {
+      // Clear session after successful preview creation
+      clearUserSession();
       navigate('/preview-article', { state: { articleId, selectedPublishers } });
     }
   };
@@ -208,7 +240,7 @@ const WriteArticle = () => {
     await saveArticle('writing');
   };
 
-  // Show loading state while restoring publishers
+  // Show loading state while restoring session
   if (isLoading) {
     return (
       <>
@@ -216,7 +248,7 @@ const WriteArticle = () => {
         <div className="container max-w-4xl py-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Setting up your article...</p>
+            <p className="text-gray-600 dark:text-gray-400">Restoring your session...</p>
           </div>
         </div>
       </>

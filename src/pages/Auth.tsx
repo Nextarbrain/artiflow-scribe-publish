@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getUserSession, hasUserSession } from '@/utils/sessionStorage';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,48 +35,61 @@ const Auth = () => {
       
       // Small delay to ensure session is fully established
       setTimeout(() => {
-        // Check for saved publishers from SelectPublisher page
-        const savedPublishers = localStorage.getItem('selectedPublishers');
-        console.log('Auth: Checking for selectedPublishers in localStorage:', savedPublishers);
+        // Check for saved session
+        const savedSession = getUserSession();
+        console.log('Auth: Checking for saved session:', savedSession);
         
-        if (savedPublishers) {
-          try {
-            const parsedPublishers = JSON.parse(savedPublishers);
-            console.log('Auth: Found saved publishers:', parsedPublishers);
+        if (savedSession) {
+          console.log('Auth: Found saved session, determining redirect');
+          
+          // Determine where to redirect based on saved session
+          if (savedSession.currentRoute === '/write-article' && savedSession.selectedPublishers?.length > 0) {
+            console.log('Auth: Redirecting to write-article with saved session');
             
-            if (Array.isArray(parsedPublishers) && parsedPublishers.length > 0) {
-              console.log('Auth: Valid publishers found, redirecting to write-article');
-              
-              // Show success toast
-              toast({
-                title: "Welcome back!",
-                description: `Continuing with ${parsedPublishers.length} selected publisher${parsedPublishers.length > 1 ? 's' : ''}`,
-              });
-              
-              // Navigate to write-article with the selected publishers
-              navigate('/write-article', { 
-                state: { 
-                  selectedPublishers: parsedPublishers,
-                  fromAuth: true 
-                },
-                replace: true 
-              });
-              
-              // Clear localStorage after successful navigation
-              localStorage.removeItem('selectedPublishers');
-              return;
-            } else {
-              console.log('Auth: Invalid publishers array, cleaning up localStorage');
-              localStorage.removeItem('selectedPublishers');
-            }
-          } catch (error) {
-            console.error('Auth: Error parsing saved publishers:', error);
-            localStorage.removeItem('selectedPublishers');
+            toast({
+              title: "Welcome back!",
+              description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
+            });
+            
+            navigate('/write-article', { 
+              state: { 
+                selectedPublishers: savedSession.selectedPublishers,
+                fromAuth: true 
+              },
+              replace: true 
+            });
+            return;
+          } else if (savedSession.currentRoute === '/select-publisher' && savedSession.selectedPublishers?.length > 0) {
+            console.log('Auth: Redirecting to select-publisher with saved session');
+            
+            toast({
+              title: "Welcome back!",
+              description: `Continuing with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
+            });
+            
+            navigate('/select-publisher', { replace: true });
+            return;
+          } else if (savedSession.selectedPublishers?.length > 0) {
+            console.log('Auth: Has selected publishers, redirecting to write-article');
+            
+            toast({
+              title: "Welcome back!",
+              description: `Continuing with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
+            });
+            
+            navigate('/write-article', { 
+              state: { 
+                selectedPublishers: savedSession.selectedPublishers,
+                fromAuth: true 
+              },
+              replace: true 
+            });
+            return;
           }
         }
         
-        // No valid saved publishers, redirect to dashboard
-        console.log('Auth: No saved publishers, redirecting to dashboard');
+        // No valid saved session, redirect to dashboard
+        console.log('Auth: No saved session, redirecting to dashboard');
         toast({
           title: "Welcome back!",
           description: "You're now signed in to your account.",
@@ -178,8 +192,8 @@ const Auth = () => {
     );
   }
 
-  // Check if user came from publisher selection
-  const hasSelectedPublishers = localStorage.getItem('selectedPublishers');
+  // Check if user has a saved session
+  const hasSavedSession = hasUserSession();
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
@@ -195,14 +209,14 @@ const Auth = () => {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {hasSelectedPublishers 
+            {hasSavedSession 
               ? (isLogin ? 'Sign in to Continue' : 'Create Account to Continue')
               : (isLogin ? 'Welcome Back' : 'Create Account')
             }
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {hasSelectedPublishers 
-              ? 'Sign in to proceed with your selected publishers'
+            {hasSavedSession 
+              ? 'Sign in to continue where you left off'
               : (isLogin 
                   ? 'Sign in to your account to continue' 
                   : 'Join us and start creating amazing articles'
