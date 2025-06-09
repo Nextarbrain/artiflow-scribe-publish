@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserSession, hasUserSession, saveUserSession } from '@/utils/sessionStorage';
+import { getUserSession, hasUserSession } from '@/utils/sessionStorage';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,7 +16,6 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [redirectAttempted, setRedirectAttempted] = useState(false);
   
   const { signIn, signUp, signInWithGoogle, user, session, loading: authLoading } = useAuth();
   const { theme } = useTheme();
@@ -27,14 +25,12 @@ const Auth = () => {
 
   useEffect(() => {
     console.log('Auth: useEffect triggered - User:', !!user, 'Session:', !!session, 'Loading:', authLoading);
-    console.log('Auth: Current location state:', location.state);
     
-    // Only attempt redirect if we have a valid authenticated user and haven't already attempted
-    if (user && session?.access_token && !authLoading && !redirectAttempted) {
-      console.log('Auth: User authenticated, starting redirect process');
-      setRedirectAttempted(true);
+    // Only handle redirect if we have a valid authenticated user and session
+    if (user && session?.access_token && !authLoading) {
+      console.log('Auth: User authenticated, checking for saved session');
       
-      // Check if user came from a specific route or has saved session
+      // Check if user has saved session data (this handles both email/password and Google OAuth)
       const savedSession = getUserSession();
       console.log('Auth: Checking saved session:', savedSession);
       
@@ -45,12 +41,6 @@ const Auth = () => {
         toast({
           title: "Welcome back!",
           description: `Continuing where you left off with ${savedSession.selectedPublishers.length} selected publisher${savedSession.selectedPublishers.length > 1 ? 's' : ''}`,
-        });
-        
-        // Save current route and navigate immediately
-        saveUserSession({
-          ...savedSession,
-          currentRoute: '/write-article'
         });
         
         navigate('/write-article', { 
@@ -64,19 +54,21 @@ const Auth = () => {
         return;
       }
       
-      // If user came from homepage or clicked "Try it for free", go to select-publisher
-      // Check both location state and current path
-      const cameFromHomepage = location.state?.from === '/' || 
-                              location.state?.fromHomepage || 
-                              document.referrer.includes(window.location.origin);
+      // If user came from homepage, go to select-publisher
+      const cameFromHomepage = location.state?.fromHomepage || 
+                              savedSession?.fromHomepage ||
+                              location.state?.from === '/';
       
       if (cameFromHomepage) {
-        console.log('Auth: User came from homepage, redirecting to select-publisher to start flow');
+        console.log('Auth: User came from homepage, redirecting to select-publisher');
         toast({
           title: "Welcome!",
           description: "Let's get you started by selecting publishers.",
         });
-        navigate('/select-publisher', { replace: true });
+        navigate('/select-publisher', { 
+          state: { fromHomepage: true },
+          replace: true 
+        });
         return;
       }
       
@@ -88,14 +80,7 @@ const Auth = () => {
       });
       navigate('/select-publisher', { replace: true });
     }
-  }, [user, session, authLoading, navigate, redirectAttempted, toast, location.state]);
-
-  // Reset redirect attempt when user changes (e.g., logout)
-  useEffect(() => {
-    if (!user) {
-      setRedirectAttempted(false);
-    }
-  }, [user]);
+  }, [user, session, authLoading, navigate, toast, location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,19 +125,6 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     console.log('Auth: Google sign in initiated');
     setLoading(true);
-    
-    // Save information about where user came from before Google redirect
-    const cameFromHomepage = location.state?.from === '/' || 
-                            location.state?.fromHomepage || 
-                            document.referrer.includes(window.location.origin);
-    
-    if (cameFromHomepage) {
-      console.log('Auth: Saving homepage origin for post-Google redirect');
-      saveUserSession({
-        currentRoute: '/select-publisher',
-        fromHomepage: true
-      });
-    }
     
     try {
       const { error } = await signInWithGoogle();

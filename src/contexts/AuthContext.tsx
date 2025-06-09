@@ -2,7 +2,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { clearUserSession } from '@/utils/sessionStorage';
+import { clearUserSession, getUserSession, saveUserSession } from '@/utils/sessionStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -73,6 +73,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.error('AuthContext: Error handling profile creation:', error);
               }
             }, 100);
+          }
+
+          // Handle post-login redirect for Google OAuth
+          if (event === 'SIGNED_IN') {
+            console.log('AuthContext: User signed in, checking for redirect logic');
+            
+            // Check if user has saved session data
+            const savedSession = getUserSession();
+            console.log('AuthContext: Saved session found:', savedSession);
+            
+            if (savedSession?.selectedPublishers?.length > 0) {
+              console.log('AuthContext: Found saved publishers, will redirect to write-article');
+              
+              // Update the saved session to reflect current auth state
+              saveUserSession({
+                ...savedSession,
+                currentRoute: '/write-article'
+              });
+              
+              // Use a short delay to ensure the current component's useEffect can handle the redirect
+              setTimeout(() => {
+                if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+                  console.log('AuthContext: Redirecting to write-article from', window.location.pathname);
+                  window.location.href = '/write-article';
+                }
+              }, 500);
+            } else if (savedSession?.fromHomepage || 
+                      window.location.search.includes('from=homepage') ||
+                      document.referrer.includes('/')) {
+              console.log('AuthContext: User came from homepage, will redirect to select-publisher');
+              
+              saveUserSession({
+                currentRoute: '/select-publisher',
+                fromHomepage: true
+              });
+              
+              setTimeout(() => {
+                if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+                  console.log('AuthContext: Redirecting to select-publisher from', window.location.pathname);
+                  window.location.href = '/select-publisher';
+                }
+              }, 500);
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: User signed out, clearing session and user');
@@ -206,6 +249,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Attempting Google sign in');
       const redirectUrl = `${window.location.origin}/`;
+      
+      // Save context about where the user came from before redirect
+      const currentPath = window.location.pathname;
+      const savedSession = getUserSession();
+      
+      // Preserve the context in session storage
+      if (savedSession?.fromHomepage || currentPath === '/' || savedSession?.selectedPublishers?.length > 0) {
+        console.log('AuthContext: Preserving context for post-Google login redirect');
+        saveUserSession({
+          ...savedSession,
+          fromHomepage: savedSession?.fromHomepage || currentPath === '/',
+          currentRoute: currentPath
+        });
+      }
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
