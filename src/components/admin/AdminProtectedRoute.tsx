@@ -34,7 +34,7 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <Button 
-              onClick={() => navigate('/admin/login')} 
+              onClick={() => navigate('/auth')} 
               className="w-full bg-red-600 hover:bg-red-700 text-white"
             >
               <Shield className="w-4 h-4 mr-2" />

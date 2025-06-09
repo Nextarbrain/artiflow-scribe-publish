@@ -19,7 +19,6 @@ import PreviewArticle from "./pages/PreviewArticle";
 import Articles from "./pages/Articles";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminLogin from "./pages/AdminLogin";
 import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -35,8 +34,10 @@ const App = () => (
           <AuthProvider>
             <AdminAuthProvider>
               <Routes>
+                {/* Unified Auth Route */}
+                <Route path="/auth" element={<Auth />} />
+                
                 {/* Admin Routes */}
-                <Route path="/admin/login" element={<AdminLogin />} />
                 <Route 
                   path="/admin/*" 
                   element={
@@ -52,7 +53,6 @@ const App = () => (
                     <Header />
                     <Routes>
                       <Route path="/" element={<Index />} />
-                      <Route path="/auth" element={<Auth />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/create-article" element={<CreateArticle />} />
                       <Route path="/write-article" element={<WriteArticle />} />
