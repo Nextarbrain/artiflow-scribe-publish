@@ -19,7 +19,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
   const { generateArticle, isGenerating } = useAIGeneration();
   const [topic, setTopic] = useState(initialTopic);
   const [imageDescription, setImageDescription] = useState('');
-  const [provider, setProvider] = useState<string>('');
+  const [provider, setProvider] = useState<string>('default');
   const [generationMode, setGenerationMode] = useState<'topic' | 'image'>('topic');
 
   const handleGenerate = async () => {
@@ -27,7 +27,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
     if (!imageDescription.trim() && generationMode === 'image') return;
 
     const prompt = generationMode === 'topic' ? topic : imageDescription;
-    const options = provider ? { provider } : undefined;
+    const options = provider && provider !== 'default' ? { provider } : undefined;
     
     const result = await generateArticle(prompt, options);
 
@@ -123,7 +123,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
               <SelectValue placeholder="Use default provider" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Default Provider</SelectItem>
+              <SelectItem value="default">Default Provider</SelectItem>
               <SelectItem value="openai">
                 <div className="flex items-center gap-2">
                   {providerIcons.openai}
@@ -147,7 +147,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
         </div>
 
         {/* Selected Provider Badge */}
-        {provider && (
+        {provider && provider !== 'default' && (
           <div>
             <Badge className={providerColors[provider as keyof typeof providerColors]}>
               {providerIcons[provider as keyof typeof providerIcons]}

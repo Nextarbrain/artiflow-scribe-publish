@@ -12,8 +12,8 @@ const TestingTab = () => {
   const { config, generateContent } = useAIConfig();
   const { toast } = useToast();
   const [testPrompt, setTestPrompt] = useState('Write a short article about the benefits of renewable energy.');
-  const [selectedProvider, setSelectedProvider] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('default');
+  const [selectedModel, setSelectedModel] = useState('default');
   const [isGenerating, setIsGenerating] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
@@ -40,8 +40,8 @@ const TestingTab = () => {
       setTestResult(null);
 
       const options: any = {};
-      if (selectedProvider) options.provider = selectedProvider;
-      if (selectedModel) options.model = selectedModel;
+      if (selectedProvider && selectedProvider !== 'default') options.provider = selectedProvider;
+      if (selectedModel && selectedModel !== 'default') options.model = selectedModel;
 
       const result = await generateContent(testPrompt, options);
       setTestResult({ success: true, ...result });
@@ -67,7 +67,7 @@ const TestingTab = () => {
   };
 
   const isAIEnabled = config.ai_enabled;
-  const hasAPIKey = selectedProvider ? config[`${selectedProvider}_api_key`] : true;
+  const hasAPIKey = selectedProvider && selectedProvider !== 'default' ? config[`${selectedProvider}_api_key`] : true;
 
   return (
     <div className="space-y-6">
@@ -98,7 +98,7 @@ const TestingTab = () => {
                   <SelectValue placeholder="Use default provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Use Default Provider</SelectItem>
+                  <SelectItem value="default">Use Default Provider</SelectItem>
                   {providers.map((provider) => (
                     <SelectItem key={provider.value} value={provider.value}>
                       {provider.label}
@@ -113,13 +113,13 @@ const TestingTab = () => {
               <Select 
                 value={selectedModel} 
                 onValueChange={setSelectedModel}
-                disabled={!selectedProvider}
+                disabled={!selectedProvider || selectedProvider === 'default'}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Use default model" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Use Default Model</SelectItem>
+                  <SelectItem value="default">Use Default Model</SelectItem>
                   {currentProvider?.models.map((model) => (
                     <SelectItem key={model} value={model}>
                       {model}
@@ -140,7 +140,7 @@ const TestingTab = () => {
             />
           </div>
 
-          {selectedProvider && !hasAPIKey && (
+          {selectedProvider && selectedProvider !== 'default' && !hasAPIKey && (
             <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-800 dark:text-red-200">
                 ⚠️ API key not configured for {selectedProvider}. Please set it up in the Providers tab.
@@ -150,7 +150,7 @@ const TestingTab = () => {
 
           <Button 
             onClick={handleTest} 
-            disabled={isGenerating || !isAIEnabled || (selectedProvider && !hasAPIKey)}
+            disabled={isGenerating || !isAIEnabled || (selectedProvider && selectedProvider !== 'default' && !hasAPIKey)}
             className="w-full"
           >
             {isGenerating ? (
