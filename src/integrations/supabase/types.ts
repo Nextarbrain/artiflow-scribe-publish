@@ -357,6 +357,13 @@ export type Database = {
             referencedRelation: "publishers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "articles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       content_generation_queue: {
@@ -507,6 +514,13 @@ export type Database = {
             columns: ["publisher_id"]
             isOneToOne: false
             referencedRelation: "publishers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

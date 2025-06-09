@@ -6,6 +6,7 @@ import { Brain } from 'lucide-react';
 import ProviderCard from './ai/ProviderCard';
 import SettingsCard from './ai/SettingsCard';
 import TestingTab from './ai/TestingTab';
+import GlobalAIToggle from './ai/GlobalAIToggle';
 import { AI_PROVIDERS } from './ai/constants';
 
 const AIConfiguration = () => {
@@ -88,6 +89,9 @@ const AIConfiguration = () => {
           <p className="text-gray-600 dark:text-gray-400">Configure AI providers and content generation settings</p>
         </div>
       </div>
+
+      {/* Global AI Toggle */}
+      <GlobalAIToggle />
 
       <Tabs defaultValue="providers" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
