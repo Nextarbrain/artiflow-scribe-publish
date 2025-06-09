@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePublishers, Publisher } from '@/hooks/usePublishers';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ import { saveUserSession, getUserSession } from '@/utils/sessionStorage';
 
 const SelectPublisher = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { data: publishers, isLoading, error } = usePublishers();
   const { toast } = useToast();
@@ -22,6 +23,8 @@ const SelectPublisher = () => {
   // Restore selected publishers on component mount
   useEffect(() => {
     console.log('SelectPublisher: Component mounted, checking for saved session');
+    console.log('SelectPublisher: Location state:', location.state);
+    
     const savedSession = getUserSession();
     if (savedSession?.selectedPublishers) {
       console.log('SelectPublisher: Restoring selected publishers from session:', savedSession.selectedPublishers.length);
@@ -29,7 +32,7 @@ const SelectPublisher = () => {
     } else {
       console.log('SelectPublisher: No saved publishers found');
     }
-  }, []);
+  }, [location.state]);
 
   const handlePublisherToggle = (publisher: Publisher, checked: boolean) => {
     let updatedPublishers: Publisher[];
@@ -43,10 +46,12 @@ const SelectPublisher = () => {
     console.log('SelectPublisher: Updated publishers:', updatedPublishers.length);
     setSelectedPublishers(updatedPublishers);
     
-    // Save to session storage immediately
+    // Save to session storage immediately with homepage context if applicable
+    const fromHomepage = location.state?.fromHomepage || location.state?.from === '/';
     saveUserSession({
       selectedPublishers: updatedPublishers,
-      currentRoute: '/select-publisher'
+      currentRoute: '/select-publisher',
+      fromHomepage: fromHomepage
     });
   };
 
@@ -63,11 +68,15 @@ const SelectPublisher = () => {
     console.log('SelectPublisher: Continue clicked with publishers:', selectedPublishers.length);
 
     if (!user) {
-      // Save complete session before redirecting to auth
+      // Save complete session before redirecting to auth, including homepage context
+      const fromHomepage = location.state?.fromHomepage || location.state?.from === '/';
       console.log('SelectPublisher: User not logged in, saving session and redirecting to auth');
+      console.log('SelectPublisher: From homepage:', fromHomepage);
+      
       saveUserSession({
         selectedPublishers,
-        currentRoute: '/select-publisher'
+        currentRoute: '/select-publisher',
+        fromHomepage: fromHomepage
       });
       
       toast({
@@ -75,7 +84,13 @@ const SelectPublisher = () => {
         description: `Please sign in to continue with your ${selectedPublishers.length} selected publisher${selectedPublishers.length > 1 ? 's' : ''}.`,
       });
       
-      navigate('/auth');
+      // Pass the homepage context to auth page
+      navigate('/auth', {
+        state: {
+          from: fromHomepage ? '/' : '/select-publisher',
+          fromHomepage: fromHomepage
+        }
+      });
       return;
     }
 

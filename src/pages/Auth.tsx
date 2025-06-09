@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -21,20 +22,23 @@ const Auth = () => {
   const { signIn, signUp, signInWithGoogle, user, session, loading: authLoading } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
     console.log('Auth: useEffect triggered - User:', !!user, 'Session:', !!session, 'Loading:', authLoading);
+    console.log('Auth: Current location state:', location.state);
     
     // Only attempt redirect if we have a valid authenticated user and haven't already attempted
     if (user && session?.access_token && !authLoading && !redirectAttempted) {
       console.log('Auth: User authenticated, starting redirect process');
       setRedirectAttempted(true);
       
-      // Immediately check for saved session without delay
+      // Check if user came from a specific route or has saved session
       const savedSession = getUserSession();
       console.log('Auth: Checking saved session:', savedSession);
       
+      // If user has saved publishers, redirect to write-article
       if (savedSession?.selectedPublishers?.length > 0) {
         console.log('Auth: Found saved session with publishers, redirecting to write-article');
         
@@ -60,15 +64,31 @@ const Auth = () => {
         return;
       }
       
-      // No saved session with publishers, redirect to select publishers
-      console.log('Auth: No saved session with publishers, redirecting to select-publisher');
+      // If user came from homepage or clicked "Try it for free", go to select-publisher
+      // Check both location state and current path
+      const cameFromHomepage = location.state?.from === '/' || 
+                              location.state?.fromHomepage || 
+                              document.referrer.includes(window.location.origin);
+      
+      if (cameFromHomepage) {
+        console.log('Auth: User came from homepage, redirecting to select-publisher to start flow');
+        toast({
+          title: "Welcome!",
+          description: "Let's get you started by selecting publishers.",
+        });
+        navigate('/select-publisher', { replace: true });
+        return;
+      }
+      
+      // Default: redirect to select publishers for new users
+      console.log('Auth: No saved session, redirecting to select-publisher');
       toast({
         title: "Welcome!",
         description: "Please select publishers to get started.",
       });
       navigate('/select-publisher', { replace: true });
     }
-  }, [user, session, authLoading, navigate, redirectAttempted, toast]);
+  }, [user, session, authLoading, navigate, redirectAttempted, toast, location.state]);
 
   // Reset redirect attempt when user changes (e.g., logout)
   useEffect(() => {
@@ -121,11 +141,17 @@ const Auth = () => {
     console.log('Auth: Google sign in initiated');
     setLoading(true);
     
-    // Save current session state before Google redirect
-    const currentSession = getUserSession();
-    if (currentSession) {
-      console.log('Auth: Saving session before Google redirect');
-      saveUserSession(currentSession);
+    // Save information about where user came from before Google redirect
+    const cameFromHomepage = location.state?.from === '/' || 
+                            location.state?.fromHomepage || 
+                            document.referrer.includes(window.location.origin);
+    
+    if (cameFromHomepage) {
+      console.log('Auth: Saving homepage origin for post-Google redirect');
+      saveUserSession({
+        currentRoute: '/select-publisher',
+        fromHomepage: true
+      });
     }
     
     try {

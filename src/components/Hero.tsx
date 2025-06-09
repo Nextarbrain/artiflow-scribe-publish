@@ -7,6 +7,16 @@ import { useNavigate } from 'react-router-dom';
 const Hero = () => {
   const navigate = useNavigate();
 
+  const handleTryItForFree = () => {
+    // Navigate to select-publisher with state indicating user came from homepage
+    navigate('/select-publisher', { 
+      state: { 
+        fromHomepage: true,
+        from: '/' 
+      } 
+    });
+  };
+
   return (
     <section className="relative py-20 lg:py-32 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Background decoration */}
@@ -41,7 +51,7 @@ const Hero = () => {
           <Button 
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            onClick={() => navigate('/select-publisher')}
+            onClick={handleTryItForFree}
           >
             Try it for Free
             <ArrowRight className="w-5 h-5 ml-2" />
