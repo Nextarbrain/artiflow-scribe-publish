@@ -7,6 +7,7 @@ import ProviderCard from './ai/ProviderCard';
 import SettingsCard from './ai/SettingsCard';
 import TestingTab from './ai/TestingTab';
 import GlobalAIToggle from './ai/GlobalAIToggle';
+import APIKeysCard from './ai/APIKeysCard';
 import { AI_PROVIDERS } from './ai/constants';
 
 const AIConfiguration = () => {
@@ -93,12 +94,26 @@ const AIConfiguration = () => {
       {/* Global AI Toggle */}
       <GlobalAIToggle />
 
-      <Tabs defaultValue="providers" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="api-keys" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="providers">Providers</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="testing">Testing</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="api-keys" className="space-y-6">
+          <APIKeysCard
+            configs={aiConfigs}
+            editValues={editValues}
+            showSensitive={showSensitive}
+            onValueChange={handleValueChange}
+            onSave={handleSave}
+            onToggleVisibility={toggleSensitiveVisibility}
+            getCurrentValue={getCurrentValue}
+            hasChanges={hasChanges}
+          />
+        </TabsContent>
 
         <TabsContent value="providers" className="space-y-6">
           {AI_PROVIDERS.map((provider) => (
