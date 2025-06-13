@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,22 +12,6 @@ import ModerationDialog from './moderation/ModerationDialog';
 import { FileText, Search, Filter } from 'lucide-react';
 import { ContentModerationItem } from './moderation/types';
 
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  excerpt: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  moderation_status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  user_id: string;
-  profiles: {
-    id: string;
-    full_name: string | null;
-    email: string | null;
-  } | null;
-}
-
 const ContentModeration = () => {
   const { moderationItems, loading, moderateContent, refetch } = useModerationData();
   const [selectedItem, setSelectedItem] = useState<ContentModerationItem | null>(null);
@@ -35,14 +20,6 @@ const ContentModeration = () => {
 
   const handleSelectItem = (item: ContentModerationItem) => {
     setSelectedItem(item);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value);
   };
 
   const handleModerate = async (itemId: string, status: 'approved' | 'rejected', feedback?: string) => {
@@ -197,17 +174,7 @@ const ContentModeration = () => {
       {/* Moderation Dialog */}
       {selectedItem && (
         <ModerationDialog
-          item={{
-            ...selectedItem,
-            status: selectedItem.status as 'pending' | 'approved' | 'rejected',
-            articles: selectedItem.articles ? {
-              ...selectedItem.articles,
-              id: selectedItem.articles.id,
-              excerpt: selectedItem.articles.excerpt,
-              created_at: selectedItem.articles.created_at,
-              profiles: selectedItem.articles.profiles
-            } : null
-          }}
+          item={selectedItem}
           onClose={() => setSelectedItem(null)}
           onModerate={handleModerate}
         />

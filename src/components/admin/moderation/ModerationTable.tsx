@@ -1,18 +1,24 @@
 
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { ContentModerationItem } from './types';
 import ModerationStatus from './ModerationStatus';
-import ModerationDialog from './ModerationDialog';
+import { Eye, CheckCircle, XCircle } from 'lucide-react';
 
 interface ModerationTableProps {
-  moderationItems: ContentModerationItem[];
-  loading: boolean;
-  onModerate: (itemId: string, status: 'approved' | 'rejected', feedback?: string) => void;
+  items: ContentModerationItem[];
+  onSelectItem: (item: ContentModerationItem) => void;
+  onModerate: (itemId: string, status: 'approved' | 'rejected', feedback?: string) => Promise<void>;
+  showAll?: boolean;
 }
 
-const ModerationTable = ({ moderationItems, loading, onModerate }: ModerationTableProps) => {
+const ModerationTable = ({ items, onSelectItem, onModerate, showAll = false }: ModerationTableProps) => {
+  const handleQuickModerate = async (item: ContentModerationItem, status: 'approved' | 'rejected') => {
+    await onModerate(item.id, status);
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -21,31 +27,25 @@ const ModerationTable = ({ moderationItems, loading, onModerate }: ModerationTab
           <TableHead>Author</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Submitted</TableHead>
-          <TableHead>Moderator</TableHead>
+          {showAll && <TableHead>Moderator</TableHead>}
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading ? (
+        {items.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            </TableCell>
-          </TableRow>
-        ) : moderationItems.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-              No content pending moderation
+            <TableCell colSpan={showAll ? 6 : 5} className="text-center py-8 text-gray-500">
+              No content found
             </TableCell>
           </TableRow>
         ) : (
-          moderationItems.map((item) => (
+          items.map((item) => (
             <TableRow key={item.id}>
               <TableCell>
                 <div className="max-w-xs">
                   <div className="font-medium truncate">{item.articles?.title || 'Untitled'}</div>
                   <div className="text-sm text-gray-500 truncate">
-                    {item.articles?.content.substring(0, 100)}...
+                    {item.articles?.content?.substring(0, 100)}...
                   </div>
                 </div>
               </TableCell>
@@ -63,16 +63,46 @@ const ModerationTable = ({ moderationItems, loading, onModerate }: ModerationTab
                   {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                 </div>
               </TableCell>
-              <TableCell>
-                {item.moderator_id ? (
-                  <div className="text-sm">
-                    Moderated {item.moderated_at && formatDistanceToNow(new Date(item.moderated_at), { addSuffix: true })}
-                  </div>
-                ) : '-'}
-              </TableCell>
+              {showAll && (
+                <TableCell>
+                  {item.moderator_id ? (
+                    <div className="text-sm">
+                      Moderated {item.moderated_at && formatDistanceToNow(new Date(item.moderated_at), { addSuffix: true })}
+                    </div>
+                  ) : '-'}
+                </TableCell>
+              )}
               <TableCell>
                 <div className="flex gap-2">
-                  <ModerationDialog item={item} onModerate={onModerate} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSelectItem(item)}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                  {item.status === 'pending' && (
+                    <>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleQuickModerate(item, 'approved')}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleQuickModerate(item, 'rejected')}
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

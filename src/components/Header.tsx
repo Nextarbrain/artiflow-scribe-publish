@@ -49,14 +49,24 @@ const Header = () => {
               Articles
             </Button>
             {user && (
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/create-article')}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/create-article')}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/select-publisher')}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Write for Publishers
+                </Button>
+              </>
             )}
             {isAdmin && (
               <Button
