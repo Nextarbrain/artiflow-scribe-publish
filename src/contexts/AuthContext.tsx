@@ -30,10 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: userData.id,
         email: userData.email,
         full_name: userData.user_metadata?.full_name || userData.user_metadata?.name || null,
-        avatar_url: userData.user_metadata?.avatar_url || null,
+        avatar_url: userData.user_metadata?.avatar_url || userData.user_metadata?.picture || null,
         last_login_at: new Date().toISOString(),
         email_verified: userData.email_confirmed_at ? true : false
       };
+
+      console.log('AuthContext: Profile data to upsert:', profileData);
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -66,8 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session.user);
           
-          // Update profile for sign-ins (but don't block the auth flow)
-          if (event === 'SIGNED_IN') {
+          // Update profile for all sign-ins (including Google OAuth)
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            console.log('AuthContext: Updating profile after sign in/token refresh');
             setTimeout(() => {
               updateProfile(session.user);
             }, 0);
@@ -115,6 +118,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('AuthContext: Initial session loaded with access token');
             setSession(session);
             setUser(session?.user ?? null);
+            
+            // Update profile for initial session if user exists
+            if (session.user) {
+              setTimeout(() => {
+                updateProfile(session.user);
+              }, 0);
+            }
           } else {
             console.log('AuthContext: No valid initial session');
             setSession(null);
