@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 export interface AIGenerationRequest {
   prompt: string;
-  provider?: 'openai' | 'gemini' | 'deepseek';
   systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
@@ -57,6 +56,7 @@ export const useAIGeneration = () => {
       setIsGenerating(true);
       const startTime = Date.now();
       
+      // Don't specify provider - let the edge function use admin-configured default
       const { data, error } = await supabase.functions.invoke('ai-content-generator', {
         body: request
       });
@@ -68,12 +68,12 @@ export const useAIGeneration = () => {
       
       setLastGeneration(response);
       
-      // Log successful usage
+      // Log successful usage (without showing provider to user)
       await logAIUsage(response, undefined, true);
       
       toast({
         title: "Content Generated",
-        description: `Successfully generated content using ${data.provider}`,
+        description: "Successfully generated content using AI",
       });
 
       return response;
@@ -82,7 +82,7 @@ export const useAIGeneration = () => {
       
       // Log failed usage
       await logAIUsage(
-        { content: '', provider: request.provider || 'unknown' }, 
+        { content: '', provider: 'unknown' }, 
         undefined, 
         false, 
         error.message
@@ -99,7 +99,7 @@ export const useAIGeneration = () => {
     }
   };
 
-  const generateArticle = async (topic: string, provider?: string) => {
+  const generateArticle = async (topic: string) => {
     const prompt = `Create a comprehensive article about: ${topic}
 
 Please structure the article with:
@@ -114,11 +114,10 @@ Make the content informative, well-researched, and engaging for readers.`;
 
     return await generateContent({
       prompt,
-      provider: provider as any,
     });
   };
 
-  const generateFromImage = async (imageDescription: string, provider?: string) => {
+  const generateFromImage = async (imageDescription: string) => {
     const prompt = `Based on this image description: "${imageDescription}"
 
 Create an engaging article that:
@@ -132,7 +131,6 @@ Structure it with a compelling title, clear sections, and make it informative an
 
     return await generateContent({
       prompt,
-      provider: provider as any,
     });
   };
 

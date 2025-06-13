@@ -15,7 +15,6 @@ interface AIArticleGeneratorProps {
 
 const AIArticleGenerator = ({ onGenerated }: AIArticleGeneratorProps) => {
   const [topic, setTopic] = useState('');
-  const [provider, setProvider] = useState('openai');
   const [keywords, setKeywords] = useState('');
   const [tone, setTone] = useState('professional');
   const [length, setLength] = useState('medium');
@@ -53,9 +52,9 @@ Format your response as JSON with these exact keys:
   "tags": "tag1, tag2, tag3"
 }`;
 
+    // Use admin-configured provider (don't specify provider to use default)
     const result = await generateContent({
       prompt,
-      provider: provider as any,
       maxTokens: 2000,
       temperature: 0.7
     });
@@ -93,31 +92,15 @@ Format your response as JSON with these exact keys:
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="topic">Article Topic</Label>
-            <Input
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Benefits of Remote Work"
-              className="mt-1"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="provider">AI Provider</Label>
-            <Select value={provider} onValueChange={setProvider}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="openai">OpenAI (GPT)</SelectItem>
-                <SelectItem value="gemini">Google Gemini</SelectItem>
-                <SelectItem value="deepseek">DeepSeek</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div>
+          <Label htmlFor="topic">Article Topic</Label>
+          <Input
+            id="topic"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="e.g., Benefits of Remote Work"
+            className="mt-1"
+          />
         </div>
 
         <div>

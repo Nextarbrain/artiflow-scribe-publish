@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +32,7 @@ const SimpleAIGeneration: React.FC<SimpleAIGenerationProps> = ({
 
     setLoading(true);
     try {
-      // Call the AI generation function
+      // Call the AI generation function without specifying provider - let admin settings decide
       const { data, error } = await supabase.functions.invoke('ai-content-generator', {
         body: {
           prompt: `Write a comprehensive article about: ${topic}`,
