@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { Sparkles, Brain, Zap, Loader2 } from 'lucide-react';
@@ -19,7 +18,6 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
   const { generateArticle, generateFromImage, isGenerating } = useAIGeneration();
   const [topic, setTopic] = useState(initialTopic);
   const [imageDescription, setImageDescription] = useState('');
-  const [provider, setProvider] = useState<string>('');
   const [generationMode, setGenerationMode] = useState<'topic' | 'image'>('topic');
 
   const handleGenerate = async () => {
@@ -27,8 +25,8 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
     if (!imageDescription.trim() && generationMode === 'image') return;
 
     const result = generationMode === 'topic' 
-      ? await generateArticle(topic, provider || undefined)
-      : await generateFromImage(imageDescription, provider || undefined);
+      ? await generateArticle(topic)
+      : await generateFromImage(imageDescription);
 
     if (result) {
       // Extract title from content (assuming it's the first line)
@@ -40,18 +38,6 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
     }
   };
 
-  const providerIcons = {
-    'openai': <Brain className="w-4 h-4" />,
-    'gemini': <Sparkles className="w-4 h-4" />,
-    'deepseek': <Zap className="w-4 h-4" />,
-  };
-
-  const providerColors = {
-    'openai': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-400',
-    'gemini': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-400',
-    'deepseek': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-400',
-  };
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -60,7 +46,7 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
           AI Content Generator
         </CardTitle>
         <CardDescription>
-          Generate high-quality articles using advanced AI models
+          Generate high-quality articles using AI
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -111,47 +97,6 @@ const AIGeneration: React.FC<AIGenerationProps> = ({ onContentGenerated, initial
               onChange={(e) => setImageDescription(e.target.value)}
               rows={3}
             />
-          </div>
-        )}
-
-        {/* AI Provider Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="provider">AI Provider (Optional)</Label>
-          <Select value={provider} onValueChange={setProvider}>
-            <SelectTrigger>
-              <SelectValue placeholder="Use default provider" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Default Provider</SelectItem>
-              <SelectItem value="openai">
-                <div className="flex items-center gap-2">
-                  {providerIcons.openai}
-                  OpenAI GPT
-                </div>
-              </SelectItem>
-              <SelectItem value="gemini">
-                <div className="flex items-center gap-2">
-                  {providerIcons.gemini}
-                  Google Gemini
-                </div>
-              </SelectItem>
-              <SelectItem value="deepseek">
-                <div className="flex items-center gap-2">
-                  {providerIcons.deepseek}
-                  DeepSeek
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Selected Provider Badge */}
-        {provider && (
-          <div>
-            <Badge className={providerColors[provider as keyof typeof providerColors]}>
-              {providerIcons[provider as keyof typeof providerIcons]}
-              <span className="ml-1">{provider.charAt(0).toUpperCase() + provider.slice(1)}</span>
-            </Badge>
           </div>
         )}
 
