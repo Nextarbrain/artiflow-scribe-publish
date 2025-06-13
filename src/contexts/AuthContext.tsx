@@ -1,7 +1,7 @@
-import React, { createContext, useEffect, useState } from 'react';
+
+import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { saveUserSession, getUserSession } from '@/utils/sessionStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -20,48 +20,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const updateProfile = useCallback(async (userData: User, isNewSignup = false) => {
+    try {
+      console.log('AuthContext: Updating profile for user:', userData.id);
+      
+      const profileData = {
+        id: userData.id,
+        email: userData.email,
+        full_name: userData.user_metadata?.full_name || userData.user_metadata?.name || null,
+        avatar_url: userData.user_metadata?.avatar_url || null,
+        last_login_at: new Date().toISOString(),
+        email_verified: userData.email_confirmed_at ? true : false
+      };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(profileData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (profileError) {
+        console.error('AuthContext: Error updating profile:', profileError);
+      } else {
+        console.log('AuthContext: Profile updated successfully');
+      }
+    } catch (error) {
+      console.error('AuthContext: Error in updateProfile:', error);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
+    const handleAuthStateChange = async (event: string, session: Session | null) => {
+      if (!mounted) return;
 
-        console.log('AuthContext: Auth state changed:', event, session?.user?.email);
-        
+      console.log('AuthContext: Auth state changed:', event, session?.user?.email);
+      
+      try {
         if (session?.user && session?.access_token) {
           console.log('AuthContext: Setting valid session and user');
           setSession(session);
           setUser(session.user);
           
-          // Create/update profile for new signups or signins
+          // Update profile for sign-ins (but don't block the auth flow)
           if (event === 'SIGNED_IN') {
-            console.log('AuthContext: User signed in, creating/updating profile');
-            try {
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                  id: session.user.id,
-                  email: session.user.email,
-                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
-                  avatar_url: session.user.user_metadata?.avatar_url,
-                  last_login_at: new Date().toISOString(),
-                  email_verified: session.user.email_confirmed_at ? true : false
-                }, { 
-                  onConflict: 'id',
-                  ignoreDuplicates: false 
-                });
-
-              if (profileError) {
-                console.error('AuthContext: Error creating/updating profile:', profileError);
-              } else {
-                console.log('AuthContext: Profile created/updated successfully');
-              }
-            } catch (error) {
-              console.error('AuthContext: Error handling profile creation:', error);
-            }
+            setTimeout(() => {
+              updateProfile(session.user);
+            }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: User signed out, clearing session and user');
@@ -72,19 +81,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(null);
           setUser(null);
         }
-        
-        setLoading(false);
+      } catch (error) {
+        console.error('AuthContext: Error handling auth state change:', error);
+      } finally {
+        if (!isInitialized) {
+          setLoading(false);
+          setIsInitialized(true);
+        }
       }
-    );
+    };
 
-    // Get initial session
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+
+    // Get initial session with timeout
     const getInitialSession = async () => {
       try {
         console.log('AuthContext: Getting initial session');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
           console.error('AuthContext: Error getting initial session:', error);
-          if (mounted) setLoading(false);
+          if (mounted) {
+            setLoading(false);
+            setIsInitialized(true);
+          }
           return;
         }
         
@@ -98,21 +120,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(null);
             setUser(null);
           }
-          setLoading(false);
+          
+          if (!isInitialized) {
+            setLoading(false);
+            setIsInitialized(true);
+          }
         }
       } catch (error) {
         console.error('AuthContext: Error in getInitialSession:', error);
-        if (mounted) setLoading(false);
+        if (mounted && !isInitialized) {
+          setLoading(false);
+          setIsInitialized(true);
+        }
       }
     };
+
+    // Add timeout for initial session check
+    const sessionTimeout = setTimeout(() => {
+      if (mounted && !isInitialized) {
+        console.warn('AuthContext: Session check timeout, setting loading to false');
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }, 3000); // 3 second timeout
 
     getInitialSession();
 
     return () => {
       mounted = false;
+      clearTimeout(sessionTimeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [updateProfile, isInitialized]);
 
   const refreshSession = async () => {
     try {
