@@ -35,7 +35,7 @@ export const useModerationData = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setModerationItems(data || []);
+      setModerationItems((data || []) as ContentModerationItem[]);
     } catch (error) {
       console.error('Error fetching moderation items:', error);
       toast({

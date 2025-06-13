@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import ImageUpload from './ImageUpload';
+import AIGeneration from './AIGeneration';
 import { Save, Eye, FileText } from 'lucide-react';
 
 const ArticleForm: React.FC = () => {
@@ -42,6 +43,20 @@ const ArticleForm: React.FC = () => {
 
   const handleRemoveImage = () => {
     setFormData(prev => ({ ...prev, featured_image_url: '' }));
+  };
+
+  const handleAIContentGenerated = (content: string, title: string) => {
+    setFormData(prev => ({
+      ...prev,
+      title: title,
+      content: content,
+      excerpt: generateExcerpt(content)
+    }));
+    
+    toast({
+      title: "AI Content Generated",
+      description: "Article content has been generated successfully!",
+    });
   };
 
   const generateExcerpt = (content: string) => {
@@ -115,6 +130,12 @@ const ArticleForm: React.FC = () => {
           Share your knowledge with the world
         </p>
       </div>
+
+      {/* AI Article Generator */}
+      <AIGeneration 
+        onContentGenerated={handleAIContentGenerated}
+        initialTopic=""
+      />
 
       <Card className="p-6 space-y-6">
         <div className="space-y-4">
