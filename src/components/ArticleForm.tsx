@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import ImageUpload from './ImageUpload';
-import AIGeneration from './AIGeneration';
+import SimpleAIGeneration from './SimpleAIGeneration';
 import { Save, Eye, FileText } from 'lucide-react';
 
 const ArticleForm: React.FC = () => {
@@ -65,7 +65,15 @@ const ArticleForm: React.FC = () => {
   };
 
   const handleSubmit = async (status: 'draft' | 'published') => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to create articles.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
 
     if (!formData.title.trim() || !formData.content.trim()) {
       toast({
@@ -112,10 +120,19 @@ const ArticleForm: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 dark:text-gray-400">
-          Please sign in to create articles.
-        </p>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Sign In Required
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please sign in to create articles.
+          </p>
+          <Button onClick={() => navigate('/auth')}>
+            Sign In
+          </Button>
+        </div>
       </div>
     );
   }
@@ -132,7 +149,7 @@ const ArticleForm: React.FC = () => {
       </div>
 
       {/* AI Article Generator */}
-      <AIGeneration 
+      <SimpleAIGeneration 
         onContentGenerated={handleAIContentGenerated}
         initialTopic=""
       />
