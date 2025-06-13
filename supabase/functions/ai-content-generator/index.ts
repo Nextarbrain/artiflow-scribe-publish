@@ -9,12 +9,12 @@ const corsHeaders = {
 };
 
 interface AIRequest {
-  provider: 'openai' | 'gemini' | 'deepseek';
   prompt: string;
   systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
   model?: string;
+  type?: string;
 }
 
 const supabase = createClient(
@@ -28,7 +28,10 @@ async function getAIConfig() {
     .select('*')
     .eq('category', 'ai');
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching AI config:', error);
+    throw error;
+  }
 
   const config: Record<string, any> = {};
   data.forEach(item => {
@@ -39,20 +42,19 @@ async function getAIConfig() {
     }
   });
 
+  console.log('AI Config loaded:', Object.keys(config));
   return config;
 }
 
 function estimateTokens(text: string): number {
-  // Rough estimation: 1 token ≈ 4 characters for English text
   return Math.ceil(text.length / 4);
 }
 
 function calculateCost(provider: string, promptTokens: number, completionTokens: number): number {
-  // Approximate costs per 1K tokens (as of 2024)
   const costs = {
-    openai: { input: 0.0015, output: 0.002 }, // GPT-4o-mini
-    gemini: { input: 0.00015, output: 0.0006 }, // Gemini 1.5 Flash
-    deepseek: { input: 0.00014, output: 0.00028 } // DeepSeek Chat
+    openai: { input: 0.0015, output: 0.002 },
+    gemini: { input: 0.00015, output: 0.0006 },
+    deepseek: { input: 0.00014, output: 0.00028 }
   };
 
   const providerCosts = costs[provider as keyof typeof costs] || costs.openai;
@@ -60,11 +62,20 @@ function calculateCost(provider: string, promptTokens: number, completionTokens:
 }
 
 async function generateWithOpenAI(request: AIRequest, config: any) {
-  const apiKey = config.openai_api_key;
-  if (!apiKey) throw new Error('OpenAI API key not configured');
+  const apiKey = Deno.env.get('OPENAI_API_KEY') || config.openai_api_key;
+  
+  console.log('Checking OpenAI API key...', !!apiKey);
+  
+  if (!apiKey) {
+    throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase Edge Function secrets.');
+  }
 
   const model = request.model || config.openai_model || 'gpt-4o-mini';
-  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const systemPrompt = request.systemPrompt || config.system_prompt || 'You are a helpful AI assistant that creates high-quality content.';
+  
+  console.log('Using OpenAI model:', model);
+  
+  const promptText = `${systemPrompt}\n\n${request.prompt}`;
   const promptTokens = estimateTokens(promptText);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -76,7 +87,7 @@ async function generateWithOpenAI(request: AIRequest, config: any) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: request.systemPrompt || config.system_prompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: request.prompt }
       ],
       max_tokens: request.maxTokens || config.max_tokens || 2000,
@@ -85,8 +96,9 @@ async function generateWithOpenAI(request: AIRequest, config: any) {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
+    const errorText = await response.text();
+    console.error('OpenAI API error:', errorText);
+    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
@@ -108,11 +120,12 @@ async function generateWithOpenAI(request: AIRequest, config: any) {
 }
 
 async function generateWithGemini(request: AIRequest, config: any) {
-  const apiKey = config.gemini_api_key;
+  const apiKey = Deno.env.get('GEMINI_API_KEY') || config.gemini_api_key;
   if (!apiKey) throw new Error('Gemini API key not configured');
 
   const model = request.model || config.gemini_model || 'gemini-1.5-flash';
-  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const systemPrompt = request.systemPrompt || config.system_prompt || 'You are a helpful AI assistant that creates high-quality content.';
+  const promptText = `${systemPrompt}\n\n${request.prompt}`;
   const promptTokens = estimateTokens(promptText);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -158,11 +171,12 @@ async function generateWithGemini(request: AIRequest, config: any) {
 }
 
 async function generateWithDeepSeek(request: AIRequest, config: any) {
-  const apiKey = config.deepseek_api_key;
+  const apiKey = Deno.env.get('DEEPSEEK_API_KEY') || config.deepseek_api_key;
   if (!apiKey) throw new Error('DeepSeek API key not configured');
 
   const model = request.model || config.deepseek_model || 'deepseek-chat';
-  const promptText = `${request.systemPrompt || config.system_prompt}\n\n${request.prompt}`;
+  const systemPrompt = request.systemPrompt || config.system_prompt || 'You are a helpful AI assistant that creates high-quality content.';
+  const promptText = `${systemPrompt}\n\n${request.prompt}`;
   const promptTokens = estimateTokens(promptText);
 
   const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -174,7 +188,7 @@ async function generateWithDeepSeek(request: AIRequest, config: any) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: request.systemPrompt || config.system_prompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: request.prompt }
       ],
       max_tokens: request.maxTokens || config.max_tokens || 2000,
@@ -211,10 +225,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('AI content generator called');
     const request: AIRequest = await req.json();
+    console.log('Request received:', { ...request, prompt: request.prompt?.substring(0, 100) + '...' });
+    
     const config = await getAIConfig();
     
-    const provider = request.provider || config.default_provider || 'openai';
+    // Default to OpenAI if no provider specified in config
+    const provider = config.default_provider || 'openai';
+    console.log('Using AI provider:', provider);
     
     let result: any;
     
@@ -229,22 +248,27 @@ serve(async (req) => {
         result = await generateWithDeepSeek(request, config);
         break;
       default:
-        throw new Error(`Unsupported AI provider: ${provider}`);
+        console.log('Unknown provider, defaulting to OpenAI');
+        result = await generateWithOpenAI(request, config);
     }
+
+    console.log('Generation successful, content length:', result.content?.length);
 
     return new Response(JSON.stringify({ 
       content: result.content,
       provider: provider,
       usage: result.usage,
       model: result.model,
-      cost: result.cost
+      cost: result.cost,
+      generatedText: result.content // For backward compatibility
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in AI content generator:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'An unexpected error occurred' 
+      error: error.message || 'An unexpected error occurred',
+      details: error.toString()
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
