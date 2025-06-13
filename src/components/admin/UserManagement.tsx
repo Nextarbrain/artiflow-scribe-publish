@@ -1,84 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAdminManagement } from '@/hooks/useAdminManagement';
 import { Users, Mail, Phone, Globe, Calendar, Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-interface UserProfile {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  status: string | null;
-  last_login_at: string | null;
-  email_verified: boolean | null;
-  phone: string | null;
-  country: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 const UserManagement = () => {
-  const { toast } = useToast();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data as UserProfile[] || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch users",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateUserStatus = async (userId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          status, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `User status updated to ${status}`,
-      });
-
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update user status",
-        variant: "destructive",
-      });
-    }
-  };
+  const { users, loading, fetchUsers, updateUserStatus } = useAdminManagement();
 
   const getStatusBadge = (status: string | null) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
@@ -94,6 +27,10 @@ const UserManagement = () => {
       return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
     }
     return email?.[0]?.toUpperCase() || 'U';
+  };
+
+  const handleUpdateUserStatus = async (userId: string, status: string) => {
+    await updateUserStatus(userId, status);
   };
 
   useEffect(() => {
@@ -197,7 +134,7 @@ const UserManagement = () => {
                   <TableCell>
                     <Select
                       value={user.status || 'active'}
-                      onValueChange={(value) => updateUserStatus(user.id, value)}
+                      onValueChange={(value) => handleUpdateUserStatus(user.id, value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
