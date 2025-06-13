@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = useCallback(async (userData: User, isNewSignup = false) => {
     try {
       console.log('AuthContext: Updating profile for user:', userData.id);
+      console.log('AuthContext: User metadata:', userData.user_metadata);
       
       const profileData = {
         id: userData.id,
@@ -37,17 +38,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('AuthContext: Profile data to upsert:', profileData);
 
-      const { error: profileError } = await supabase
+      const { data, error: profileError } = await supabase
         .from('profiles')
         .upsert(profileData, { 
           onConflict: 'id',
           ignoreDuplicates: false 
-        });
+        })
+        .select();
 
       if (profileError) {
         console.error('AuthContext: Error updating profile:', profileError);
+        console.error('AuthContext: Profile error details:', {
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code
+        });
       } else {
-        console.log('AuthContext: Profile updated successfully');
+        console.log('AuthContext: Profile updated successfully:', data);
       }
     } catch (error) {
       console.error('AuthContext: Error in updateProfile:', error);
@@ -61,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!mounted) return;
 
       console.log('AuthContext: Auth state changed:', event, session?.user?.email);
+      console.log('AuthContext: Full session data:', session);
       
       try {
         if (session?.user && session?.access_token) {
@@ -71,9 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Update profile for all sign-ins (including Google OAuth)
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             console.log('AuthContext: Updating profile after sign in/token refresh');
-            setTimeout(() => {
-              updateProfile(session.user);
-            }, 0);
+            console.log('AuthContext: User data for profile update:', session.user);
+            // Use immediate execution instead of setTimeout to ensure it runs
+            await updateProfile(session.user);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('AuthContext: User signed out, clearing session and user');
@@ -121,9 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Update profile for initial session if user exists
             if (session.user) {
-              setTimeout(() => {
-                updateProfile(session.user);
-              }, 0);
+              console.log('AuthContext: Updating profile for initial session user');
+              await updateProfile(session.user);
             }
           } else {
             console.log('AuthContext: No valid initial session');
