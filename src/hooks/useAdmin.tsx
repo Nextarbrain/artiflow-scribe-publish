@@ -19,7 +19,15 @@ export const useAdmin = () => {
       }
 
       try {
-        console.log('useAdmin: Checking admin status for user:', user.id);
+        console.log('useAdmin: Checking admin status for user:', user.id, 'email:', user.email);
+        
+        // Special handling for nextarmain@gmail.com - always admin
+        if (user.email === 'nextarmain@gmail.com') {
+          console.log('useAdmin: Fixed admin user detected:', user.email);
+          setIsAdmin(true);
+          setLoading(false);
+          return;
+        }
         
         // Add a small delay to ensure session is fully established
         await new Promise(resolve => setTimeout(resolve, 100));
