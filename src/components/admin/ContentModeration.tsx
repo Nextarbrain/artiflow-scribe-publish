@@ -20,6 +20,7 @@ interface ArticleForModeration {
   status: string;
   moderation_status: string;
   created_at: string;
+  user_id: string;
   profiles: {
     id: string;
     full_name: string | null;
@@ -46,6 +47,7 @@ const ContentModeration = () => {
           status,
           moderation_status,
           created_at,
+          user_id,
           profiles!articles_user_id_fkey(
             id,
             full_name,
@@ -217,6 +219,7 @@ const ContentModeration = () => {
                           articles: {
                             title: article.title,
                             content: article.content,
+                            user_id: article.user_id,
                             profiles: article.profiles
                           }
                         }}

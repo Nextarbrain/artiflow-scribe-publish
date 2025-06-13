@@ -1,4 +1,3 @@
-
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,7 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   id: session.user.id,
                   email: session.user.email,
                   full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
-                  avatar_url: session.user.user_metadata?.avatar_url
+                  avatar_url: session.user.user_metadata?.avatar_url,
+                  last_login_at: new Date().toISOString(),
+                  email_verified: session.user.email_confirmed_at ? true : false
                 }, { 
                   onConflict: 'id',
                   ignoreDuplicates: false 

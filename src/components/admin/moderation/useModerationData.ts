@@ -24,6 +24,7 @@ export const useModerationData = () => {
             content,
             excerpt,
             created_at,
+            user_id,
             profiles!articles_user_id_fkey(
               id,
               full_name,
@@ -34,7 +35,7 @@ export const useModerationData = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setModerationItems(data as ContentModerationItem[] || []);
+      setModerationItems(data || []);
     } catch (error) {
       console.error('Error fetching moderation items:', error);
       toast({
