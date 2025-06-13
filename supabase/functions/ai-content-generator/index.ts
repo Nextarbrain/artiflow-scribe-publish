@@ -23,6 +23,7 @@ const supabase = createClient(
 );
 
 async function getAIConfig() {
+  console.log('Fetching AI configuration...');
   const { data, error } = await supabase
     .from('system_configurations')
     .select('*')
@@ -30,19 +31,32 @@ async function getAIConfig() {
 
   if (error) {
     console.error('Error fetching AI config:', error);
-    throw error;
+    return {};
   }
 
   const config: Record<string, any> = {};
-  data.forEach(item => {
+  data?.forEach(item => {
     try {
-      config[item.key] = JSON.parse(item.value);
-    } catch {
+      // Handle JSONB values
+      if (typeof item.value === 'string') {
+        try {
+          config[item.key] = JSON.parse(item.value);
+        } catch {
+          config[item.key] = item.value;
+        }
+      } else {
+        config[item.key] = item.value;
+      }
+    } catch (e) {
+      console.error(`Error parsing config for key ${item.key}:`, e);
       config[item.key] = item.value;
     }
   });
 
   console.log('AI Config loaded:', Object.keys(config));
+  console.log('AI enabled:', config.ai_enabled);
+  console.log('Default provider:', config.default_provider);
+  
   return config;
 }
 
@@ -62,12 +76,15 @@ function calculateCost(provider: string, promptTokens: number, completionTokens:
 }
 
 async function generateWithOpenAI(request: AIRequest, config: any) {
+  // Try multiple sources for API key
   const apiKey = Deno.env.get('OPENAI_API_KEY') || config.openai_api_key;
   
   console.log('Checking OpenAI API key...', !!apiKey);
+  console.log('Environment API key exists:', !!Deno.env.get('OPENAI_API_KEY'));
+  console.log('Config API key exists:', !!config.openai_api_key);
   
   if (!apiKey) {
-    throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase Edge Function secrets.');
+    throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase Edge Function secrets or configure it in the admin panel.');
   }
 
   const model = request.model || config.openai_model || 'gpt-4o-mini';
@@ -230,6 +247,11 @@ serve(async (req) => {
     console.log('Request received:', { ...request, prompt: request.prompt?.substring(0, 100) + '...' });
     
     const config = await getAIConfig();
+    
+    // Check if AI is enabled
+    if (config.ai_enabled === false) {
+      throw new Error('AI content generation is disabled in system settings');
+    }
     
     // Default to OpenAI if no provider specified in config
     const provider = config.default_provider || 'openai';
