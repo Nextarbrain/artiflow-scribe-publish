@@ -18,12 +18,15 @@ export const useModerationData = () => {
         .from('content_moderation')
         .select(`
           *,
-          articles!inner(
+          articles!content_moderation_article_id_fkey(
+            id,
             title,
             content,
-            user_id,
+            excerpt,
+            created_at,
             profiles!articles_user_id_fkey(
-              full_name, 
+              id,
+              full_name,
               email
             )
           )
@@ -31,12 +34,12 @@ export const useModerationData = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setModerationItems((data as any) || []);
-    } catch (error: any) {
+      setModerationItems(data as ContentModerationItem[] || []);
+    } catch (error) {
       console.error('Error fetching moderation items:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch moderation queue",
+        description: "Failed to fetch moderation items",
         variant: "destructive",
       });
     } finally {
@@ -45,25 +48,51 @@ export const useModerationData = () => {
   };
 
   const moderateContent = async (itemId: string, status: 'approved' | 'rejected', feedback?: string) => {
+    if (!user) return;
+
     try {
-      const { error } = await supabase
+      // Update moderation status
+      const { error: moderationError } = await supabase
         .from('content_moderation')
         .update({
           status,
-          feedback: feedback || null,
-          moderator_id: user?.id,
+          moderator_id: user.id,
           moderated_at: new Date().toISOString(),
+          feedback,
           updated_at: new Date().toISOString()
         })
         .eq('id', itemId);
 
-      if (error) throw error;
+      if (moderationError) throw moderationError;
+
+      // Get the moderation item to find the article
+      const { data: moderationItem } = await supabase
+        .from('content_moderation')
+        .select('article_id')
+        .eq('id', itemId)
+        .single();
+
+      if (moderationItem?.article_id) {
+        // Update article status based on moderation decision
+        const articleStatus = status === 'approved' ? 'published' : 'rejected';
+        const { error: articleError } = await supabase
+          .from('articles')
+          .update({
+            status: articleStatus,
+            moderation_status: status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', moderationItem.article_id);
+
+        if (articleError) throw articleError;
+      }
 
       toast({
-        title: "Success",
-        description: `Content ${status} successfully`,
+        title: "Content Moderated",
+        description: `Article has been ${status}`,
       });
 
+      // Refresh the list
       await fetchModerationItems();
     } catch (error: any) {
       console.error('Error moderating content:', error);
@@ -82,7 +111,7 @@ export const useModerationData = () => {
   return {
     moderationItems,
     loading,
-    fetchModerationItems,
-    moderateContent
+    moderateContent,
+    refetch: fetchModerationItems
   };
 };

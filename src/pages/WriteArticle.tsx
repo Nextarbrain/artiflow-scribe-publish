@@ -1,16 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Publisher } from '@/hooks/usePublishers';
 import Header from '@/components/Header';
+import AIArticleGenerator from '@/components/AIArticleGenerator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Save, Eye, ArrowLeft, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Save, Eye, ArrowLeft, Users, Sparkles, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { saveUserSession, getUserSession, clearUserSession } from '@/utils/sessionStorage';
@@ -30,6 +31,7 @@ const WriteArticle = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentArticleId, setCurrentArticleId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ai-generate');
 
   const totalAmount = selectedPublishers.reduce((sum, publisher) => sum + publisher.price_per_article, 0);
   const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
@@ -84,6 +86,11 @@ const WriteArticle = () => {
             setExcerpt(formData.excerpt || '');
             setMetaDescription(formData.metaDescription || '');
             setTags(formData.tags || '');
+            
+            // If we have content, switch to manual edit tab
+            if (formData.content) {
+              setActiveTab('manual-edit');
+            }
           }
           
           setIsLoading(false);
@@ -118,6 +125,11 @@ const WriteArticle = () => {
             setExcerpt(savedSession.formData.excerpt || '');
             setMetaDescription(savedSession.formData.metaDescription || '');
             setTags(savedSession.formData.tags || '');
+            
+            // If we have content, switch to manual edit tab
+            if (savedSession.formData.content) {
+              setActiveTab('manual-edit');
+            }
           }
           
           setIsLoading(false);
@@ -146,6 +158,26 @@ const WriteArticle = () => {
       restoreSession();
     }, 100);
   }, [user, location.state, navigate, toast]);
+
+  const handleAIGenerated = (generatedContent: {
+    title: string;
+    content: string;
+    excerpt: string;
+    metaDescription: string;
+    tags: string;
+  }) => {
+    setTitle(generatedContent.title);
+    setContent(generatedContent.content);
+    setExcerpt(generatedContent.excerpt);
+    setMetaDescription(generatedContent.metaDescription);
+    setTags(generatedContent.tags);
+    setActiveTab('manual-edit');
+    
+    toast({
+      title: "Article Generated!",
+      description: "Your AI-generated article is ready. You can edit it before publishing.",
+    });
+  };
 
   const saveArticle = async (stage: 'writing' | 'preview' = 'writing') => {
     if (!user || selectedPublishers.length === 0) return null;
@@ -305,89 +337,108 @@ const WriteArticle = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Write Your Article</CardTitle>
+            <CardTitle>Create Your Article</CardTitle>
             <CardDescription>
-              Create engaging content for your selected publishers.
+              Generate content with AI or write manually for your selected publishers.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Label htmlFor="title">Article Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter your article title..."
-                className="mt-1"
-              />
-            </div>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="ai-generate" className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  AI Generate
+                </TabsTrigger>
+                <TabsTrigger value="manual-edit" className="flex items-center gap-2">
+                  <Edit className="w-4 h-4" />
+                  Manual Edit
+                </TabsTrigger>
+              </TabsList>
 
-            <div>
-              <Label htmlFor="excerpt">Excerpt (Optional)</Label>
-              <Textarea
-                id="excerpt"
-                value={excerpt}
-                onChange={(e) => setExcerpt(e.target.value)}
-                placeholder="Brief summary of your article..."
-                className="mt-1"
-                rows={2}
-              />
-            </div>
+              <TabsContent value="ai-generate" className="space-y-6">
+                <AIArticleGenerator onGenerated={handleAIGenerated} />
+              </TabsContent>
 
-            <div>
-              <Label htmlFor="content">Article Content</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here..."
-                className="mt-1 min-h-96"
-                rows={20}
-              />
-            </div>
+              <TabsContent value="manual-edit" className="space-y-6">
+                <div>
+                  <Label htmlFor="title">Article Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter your article title..."
+                    className="mt-1"
+                  />
+                </div>
 
-            <div>
-              <Label htmlFor="meta-description">Meta Description (Optional)</Label>
-              <Textarea
-                id="meta-description"
-                value={metaDescription}
-                onChange={(e) => setMetaDescription(e.target.value)}
-                placeholder="SEO meta description..."
-                className="mt-1"
-                rows={2}
-              />
-            </div>
+                <div>
+                  <Label htmlFor="excerpt">Excerpt (Optional)</Label>
+                  <Textarea
+                    id="excerpt"
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
+                    placeholder="Brief summary of your article..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
 
-            <div>
-              <Label htmlFor="tags">Tags (Optional)</Label>
-              <Input
-                id="tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="tag1, tag2, tag3..."
-                className="mt-1"
-              />
-              <p className="text-sm text-gray-500 mt-1">Separate tags with commas</p>
-            </div>
+                <div>
+                  <Label htmlFor="content">Article Content</Label>
+                  <Textarea
+                    id="content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Write your article content here..."
+                    className="mt-1 min-h-96"
+                    rows={20}
+                  />
+                </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button 
-                onClick={handleSaveDraft}
-                variant="outline"
-                disabled={isSaving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save Draft'}
-              </Button>
-              
-              <Button 
-                onClick={handlePreview}
-                disabled={!title.trim() || !content.trim() || isSaving}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Preview Article
-              </Button>
-            </div>
+                <div>
+                  <Label htmlFor="meta-description">Meta Description (Optional)</Label>
+                  <Textarea
+                    id="meta-description"
+                    value={metaDescription}
+                    onChange={(e) => setMetaDescription(e.target.value)}
+                    placeholder="SEO meta description..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tags">Tags (Optional)</Label>
+                  <Input
+                    id="tags"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="tag1, tag2, tag3..."
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Separate tags with commas</p>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button 
+                    onClick={handleSaveDraft}
+                    variant="outline"
+                    disabled={isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? 'Saving...' : 'Save Draft'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handlePreview}
+                    disabled={!title.trim() || !content.trim() || isSaving}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview Article
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
